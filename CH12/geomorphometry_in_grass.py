@@ -382,6 +382,8 @@ def main():
             elevation=input,
             accumulation="d8_mfd_flowaccum",
             drainage="d8_mfd_flowdir",
+            stream="d8_mfd_streams",
+            basin="d8_mfd_basins",
             threshold=threshold,
             flags="a",
             quiet=True
@@ -455,6 +457,51 @@ def main():
             # legend_range_max="30000"
         )
 
+    def twi_calculation(tools: Tools, flow_accumulation, slope: str) -> None:
+        """Calculate Topographic Wetness Index (TWI)."""
+        print("Calculating Topographic Wetness Index (TWI)...")
+        tools.r_mapcalc(
+            expression=f"twi = log({flow_accumulation} / tan({slope} * 3.14159 / 180))",
+            quiet=True,
+        )
+        tools.r_colors(map="twi", color="byr", flags="en")
+        aoi_map_figure(
+            tools=tools,
+            map_name="twi",
+            releif=LIDAR_DTM_RELEIF,
+            legend_units="none",
+            legend_flags="bt",
+        )
+
+    def stream_deliniation(
+            tools: Tools,
+            elevation: str,
+            threshold: int
+    ) -> None:
+        """Delineate streams, watersheds, and flow direction."""
+        print("Delineating streams and watersheds...")
+
+        # Thin streams
+        tools.r_thin(
+            input="d8_mfd_streams",
+            output="d8_mfd_streams_thin",
+            quiet=True
+        )
+
+        # Covert streams to vector
+        tools.r_to_vect(
+            input="d8_mfd_streams_thin", output="d8_mfd_streams", type="line"
+        )
+
+        gs.run_command(
+            "r.stream.extract",
+            elevation=elevation,
+            accumulation="d8_mfd_flowaccum",
+            threshold=threshold,
+            stream_raster="stream_extract",
+            stream_vector="stream_extract"
+        )
+
     # Create a new project
     try:
         gs.create_project(path=PROJECT_NAME, epsg="2193")
@@ -514,10 +561,32 @@ def main():
         # process_lidar_data(tools=tools)
         set_ocean_to_null(elevation_map=LIDAR_DTM_NAME)
         # Compute flow accumulation using multiple methods
-        with gs.RegionManager(region=AOI_REGION, raster=LIDAR_DTM_NAME, res=1, flags="a"):
+        with gs.RegionManager(
+            region=AOI_REGION,
+            raster=LIDAR_DTM_NAME,
+            res=1,
+            flags="a"
+        ):
+            compute_second_order_derivatives(tools=tools, input=LIDAR_DTM_NAME)
+
+            # Compute flow accumulation using multiple methods
             flow_accumulation(
                 tools=tools,
                 input=LIDAR_DTM_NAME,
+                threshold=10000
+            )
+
+            # Calculate TWI
+            twi_calculation(
+                tools=tools,
+                flow_accumulation="d8_sfd_flowaccum",
+                slope=f"{LIDAR_DTM_NAME}_slope"
+            )
+
+            # Delineate streams and watersheds
+            stream_deliniation(
+                tools=tools,
+                elevation=LIDAR_DTM_NAME,
                 threshold=10000
             )
 

@@ -34,9 +34,21 @@ r.slope.aspect elevation="$DTM_NAME" slope=slope aspect=aspect pcurvature=pcurv 
 r.colors map=slope color=sepia -e
 r.colors map=aspect color=aspectcolr -e
 
-# Calculate downslope flowlines
+# 12.2.3 Flow parameters and watersheds
+
+## Calculate downslope flowlines
 r.flow elevation=dtm flowline=flowlines flowlength=flowlength flowaccumulation=flowaccum
 
-# Delineate watersheds, flow direction, and streams
-r.watershed elevation=dtm threshold=10000 accumulation=flowaccum drainage=flow_direction basin=basins stream=streams
+## Calculate topographic wetness index (twi)
+r.mapcalc expression="twi = log(flowaccum / tan(slope * 3.14159 / 180))"
 
+
+## Delineate watersheds, flow direction, and streams
+r.watershed elevation=dtm threshold=10000 accumulation=flowaccum drainage=drain_dir basin=basins stream=r_watershed_streams
+
+r.stream.extract elevation=dtm threshold=10000 stream_vector=r_streams_streams streams_raster=r_streams_streams
+
+r.stream.basins direction=drain_dir basins=r_stream_basins coordinates=1794069.22,5918153.62
+
+r.stream.distance stream_rast}=streams direction=drain_dir elevation=dtm method=downstream difference=hand
+r.lake elevation=hand water_level=3 lake=flood seed=streams
