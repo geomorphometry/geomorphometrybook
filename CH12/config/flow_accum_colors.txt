@@ -1,0 +1,8 @@
+0% white
+10% gray
+20% yellow
+25% green
+30% cyan
+65% blue
+85% purple
+100% black

@@ -31,12 +31,19 @@ import sys
 # Configuration
 PROJECT_NAME = "ponui"
 MAPSET_NAME = "PERMANENT"
+
 DSM_PATH = "./data/dsm.cog.tif"
 DSM_NAME = "dsm"
+
 DTM_PATH = "data/dtm.cog.tif"
 DTM_NAME = "dem"
+DTM_RELEIF = "dtm_releif"
+
 LIDAR_PATH = "data/lidar.laz"
+LIDAR_DTM_10M = "lidar_dtm_10m"
 LIDAR_DTM_NAME = "lidar_dtm"
+LIDAR_DTM_RELEIF = "lidar_dtm_releif"
+
 AOI_REGION = "aoi"
 SAVE_DIR = "./figures"
 
@@ -74,6 +81,67 @@ def main():
     from grass.tools import Tools
     from grass.exceptions import CalledModuleError, ScriptError
 
+    def full_region_map_figure(
+            tools: Tools,
+            map_name: str,
+            releif: str,
+            legend_units: str = "none",
+            legend_flags: str = "bt"
+    ) -> gj.Map:
+        univar_json = tools.r_univar(map=map_name, format="json").json
+        figure_output = Path(SAVE_DIR, f"{map_name}.png")
+        print(f"Saving AOI map figure to {figure_output}")
+        m = gj.Map(width=800, use_region=True)
+        m.d_shade(color=map_name, shade=releif)
+
+        m.d_legend(
+            raster=map_name,
+            at="4,38,84,86",
+            font="Fira Sans Condensed Light",
+            fontsize=12,
+            border_color="none",
+            units=legend_units,
+            range=f"{univar_json['min']},{univar_json['max']}",
+            flags=legend_flags,
+        )
+        m.d_barscale(at=(1, 5), flags="n")
+        m.save(filename=figure_output)
+        return m
+
+    def aoi_map_figure(
+            tools: Tools,
+            map_name: str,
+            releif: str,
+            legend_units: str = "none",
+            legend_flags: str = "bt",
+            legend_range_max: float | None = None,
+    ) -> gj.Map:
+
+        figure_output = Path(SAVE_DIR, f"{map_name}_aoi.png")
+        print(f"Saving AOI map figure to {figure_output}")
+        m = gj.Map(width=800, saved_region=AOI_REGION)
+        m.d_shade(color=map_name, shade=releif)
+
+        univar_json = tools.r_univar(map=map_name, format="json").json
+        legend_range = f"{univar_json['min']},{univar_json['max']}"
+
+        if legend_range_max is not None:
+            legend_range = f"{univar_json['min']},{legend_range_max}"
+
+        m.d_legend(
+            raster=map_name,
+            at="4,38,84,86",
+            font="Fira Sans Condensed Light",
+            fontsize=12,
+            border_color="none",
+            units=legend_units,
+            range=legend_range,
+            flags=legend_flags
+        )
+        m.d_barscale(at=(1, 5), flags="n")
+        m.save(filename=figure_output)
+        return m
+
     def install_grass_addons():
         """
         Install required GRASS addons from the gextensions file in parallel.
@@ -106,6 +174,19 @@ def main():
 
         except FileNotFoundError:
             print("gextensions file not found.")
+            sys.exit(1)
+
+    def set_ocean_to_null(elevation_map: str) -> None:
+        """Set ocean values (below 0) to NULL in the elevation map."""
+        print("Setting ocean values to NULL...")
+        try:
+            tools.r_null(
+                map=elevation_map,
+                setnull="-9999--1",
+                quiet=True
+            )
+        except CalledModuleError as e:
+            print(f"Error setting ocean values to NULL: {e}")
             sys.exit(1)
 
     def resample_dem(
@@ -167,7 +248,7 @@ def main():
             # Import LIDAR data and create DTM
             tools.r_in_pdal(
                 input=LIDAR_PATH,
-                output=LIDAR_DTM_NAME,
+                output=LIDAR_DTM_10M,
                 method="mean",
                 resolution=res,
                 return_filter="last",
@@ -180,6 +261,7 @@ def main():
 
     def process_lidar_data(tools: object) -> None:
         """Import LIDAR data and create DTM using RST method."""
+
         print("Importing LiDAR data...")
         tools.v_in_pdal(
             input=LIDAR_PATH,
@@ -187,29 +269,31 @@ def main():
             class_filter="2",  # ground points
             flags="o"
         )
+
+        # Interpolate LiDAR ground points to create DTM using RST
+        # Only within the AOI region at 1m resolution
         with gs.RegionManager(region=AOI_REGION, res=1, flags="a"):
             print("Creating LiDAR DTM using RST...")
             tools.v_surf_rst(
                 input="lidar_be",
-                elevation="lidar_dtm",
+                elevation=LIDAR_DTM_NAME,
                 smooth=0.5,
                 tension=20,
+                quiet=True,
+            )
+            tools.r_relief(
+                input=LIDAR_DTM_NAME,
+                output=LIDAR_DTM_RELEIF,
                 quiet=True
             )
-            tools.r_relief(input="lidar_dtm", output="lidar_dtm_releif")
-            tools.r_colors(map="lidar_dtm", color="elevation")
-            # dtm_json = tools.r_univar(map="lidar_dtm", format="json").json
-            m = gj.Map(
-                width=500,
-                saved_region=AOI_REGION,
-                filename=Path(SAVE_DIR, "lidar_dtm.png")
+            tools.r_colors(map=LIDAR_DTM_NAME, color="elevation")
+            aoi_map_figure(
+                tools=tools,
+                map_name=LIDAR_DTM_NAME,
+                releif=LIDAR_DTM_RELEIF,
+                legend_units="m",
+                legend_flags="bst"
             )
-            m.d_shade(color="lidar_dtm", shade="lidar_dtm_releif")
-            m.d_legend(
-                raster="lidar_dtm", at="7,35,2,5", flags="b", unit="m"
-            )
-            m.d_barscale(at=(1, 5), flags="n")
-            m.show()
 
     def compute_second_order_derivatives(tools: Tools, input: str) -> None:
         """Compute second order derivatives of the DEM."""
@@ -220,6 +304,8 @@ def main():
         tcurv = f"{input}_tcurv"
         dx = f"{input}_dx"
         dy = f"{input}_dy"
+
+        layers = [slope, aspect, pcurv, tcurv, dx, dy]
 
         tools.r_slope_aspect(
             elevation=input,
@@ -232,9 +318,59 @@ def main():
             quiet=True
         )
 
-        # Set color tables
+        # Generate map figures
         tools.r_colors(map=slope, color="sepia", flags="e")
+        aoi_map_figure(
+            tools=tools,
+            map_name=slope,
+            releif="dtm_releif",
+            legend_units="degrees"
+        )
+
         tools.r_colors(map=aspect, color="aspectcolr", flags="e")
+        aoi_map_figure(
+            tools=tools,
+            map_name=aspect,
+            releif="dtm_releif",
+            legend_units="degrees"
+        )
+        aoi_map_figure(
+            tools=tools,
+            map_name=pcurv,
+            releif="dtm_releif",
+            legend_units="none"
+        )
+        aoi_map_figure(
+            tools=tools,
+            map_name=tcurv,
+            releif="dtm_releif",
+            legend_units="none"
+        )
+        # Create full region figures
+        full_region_map_figure(
+            tools=tools,
+            map_name=aspect,
+            releif="dtm_releif",
+            legend_units="degrees"
+        )
+        full_region_map_figure(
+            tools=tools,
+            map_name=slope,
+            releif="dtm_releif",
+            legend_units="degrees"
+        )
+        full_region_map_figure(
+            tools=tools,
+            map_name=pcurv,
+            releif="dtm_releif",
+            legend_units="none"
+        )
+        full_region_map_figure(
+            tools=tools,
+            map_name=tcurv,
+            releif="dtm_releif",
+            legend_units="none"
+        )
 
     def flow_accumulation(tools: Tools, input: str, threshold: int) -> None:
         """Compute flow accumulation using multiple methods."""
@@ -256,9 +392,10 @@ def main():
         tools.r_watershed(
             elevation=input,
             accumulation="d8_sfd_flowaccum",
+            drainage="d8_sfd_flowdir",
             threshold=threshold,
             flags="sa",
-            quiet=True
+            quiet=True,
         )
 
         # D-infinity method SFD
@@ -272,9 +409,50 @@ def main():
         # MEFA method
         print("MEFA method...")
         tools.r_flowaccumulation(
-            input="d8_mfd_flowdir",
+            input="d8_sfd_flowdir",
+            format="45degree",
             output="MEFA_flowaccum",
-            quiet=True
+            type="CELL",
+            quiet=True,
+        )
+
+        aoi_map_figure(
+            tools=tools,
+            map_name="d8_mfd_flowaccum",
+            releif=LIDAR_DTM_RELEIF,
+            legend_units="cells",
+            legend_flags="blt",
+        )
+
+        aoi_map_figure(
+            tools=tools,
+            map_name="d8_sfd_flowaccum",
+            releif=LIDAR_DTM_RELEIF,
+            legend_units="cells",
+            legend_flags="blt",
+        )
+
+        aoi_map_figure(
+            tools=tools,
+            map_name="dinf_sfd_flowaccum",
+            releif=LIDAR_DTM_RELEIF,
+            legend_units="cells",
+            legend_flags="bt",
+        )
+
+        tools.r_colors(
+            map="MEFA_flowaccum",
+            rules="./config/flow_accum_colors.txt",
+            flags="g"
+        )
+
+        aoi_map_figure(
+            tools=tools,
+            map_name="MEFA_flowaccum",
+            releif=LIDAR_DTM_RELEIF,
+            legend_units="cells",
+            legend_flags="blt",
+            # legend_range_max="30000"
         )
 
     # Create a new project
@@ -297,9 +475,14 @@ def main():
         # Set region and run analysis tools
         tools.g_region(raster=DTM_NAME, flags="a")
 
+        # Set values below 0 to NULL
+        set_ocean_to_null(elevation_map=DTM_NAME)
+        set_ocean_to_null(elevation_map=DSM_NAME)
+        set_ocean_to_null(elevation_map=LIDAR_DTM_10M)
+
         # Set color tables and compute slope/aspect
         tools.r_colors(
-            map=[DTM_NAME, DSM_NAME, LIDAR_DTM_NAME],
+            map=[DTM_NAME, DSM_NAME, LIDAR_DTM_10M],
             color="elevation"
         )
 
@@ -308,7 +491,7 @@ def main():
 
         # Compute relief
         print("Computing relief...")
-        tools.r_relief(input=DTM_NAME, output="dtm_releif", quiet=True)
+        tools.r_relief(input=DTM_NAME, output=DTM_RELEIF, quiet=True)
 
         print("Computing skyview factor...")
         tools.r_skyview(input=DTM_NAME, output="lidar_dtm_skyview", ndir=8)
@@ -329,9 +512,14 @@ def main():
 
         # Import LiDAR data and create a 1m DTM
         # process_lidar_data(tools=tools)
-
+        set_ocean_to_null(elevation_map=LIDAR_DTM_NAME)
         # Compute flow accumulation using multiple methods
-        flow_accumulation(tools=tools, input=DTM_NAME, threshold=10000)
+        with gs.RegionManager(region=AOI_REGION, raster=LIDAR_DTM_NAME, res=1, flags="a"):
+            flow_accumulation(
+                tools=tools,
+                input=LIDAR_DTM_NAME,
+                threshold=10000
+            )
 
 
 if __name__ == "__main__":
