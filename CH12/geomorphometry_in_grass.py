@@ -141,7 +141,13 @@ def main():
             range=legend_range,
             flags=legend_flags,
         )
-        m.d_barscale(at=(1, 5), flags="n")
+        m.d_barscale(
+            at=(1, 5),
+            font="Fira Sans Condensed Light",
+            fontsize=16,
+            length=250,
+            flags="n",
+        )
         m.save(filename=figure_output)
         return m
 
@@ -604,6 +610,131 @@ def main():
             legend_flags="bt",
         )
 
+    def overland_flow():
+        gs.run_command(
+            "r.sim.water",
+            elevation=LIDAR_DTM_NAME,
+            dx=f"{LIDAR_DTM_NAME}_dx",
+            dy=f"{LIDAR_DTM_NAME}_dy",
+            rain_value=30,  # mm/hr (spatial uniform)
+            infil_value=0.0,  # mm/hr
+            man_value=0.1,
+            niterations=10,  # event duration (minutes)
+            output_step=2,  # minutes
+            depth="depth",  # m
+            discharge="disch",  # m3/s
+            random_seed=3,
+            nwalkers=100000,
+            nprocs=0,  # use all available processors
+            flags="t"
+        )
+
+        aoi_map_figure(
+            tools=tools,
+            map_name="depth.10",
+            relief=LIDAR_DTM_RELIEF,
+            legend_units="m",
+            legend_flags="bsl",
+        )
+
+    def erosion():
+        print("Calcuating erosion and deposition...")
+        tools.r_mapcalc(expression="tranin = 0.001")
+        tools.r_mapcalc(expression="detin = 0.001")
+        tools.r_mapcalc(expression="shear_stress = 0.01")
+
+        tools.r_sim_sediment(
+            elevation=LIDAR_DTM_NAME,
+            dx=f"{LIDAR_DTM_NAME}_dx",
+            dy=f"{LIDAR_DTM_NAME}_dy",
+            water_depth="depth.10",  # meters
+            detachment_coeff="detin",  # [s/m]
+            transport_coeff="tranin",  # [s]
+            shear_stress="shear_stress",  # [Pa]
+            man_value=0.1,
+            transport_capacity="transport_capacity",
+            tlimit_erosion_deposition="tlimit_erosion_deposition",
+            sediment_flux="sediment_flux",
+            erosion_deposition="erosion_deposition",
+            niterations=10,
+            output_step=2,
+            random_seed=3,
+            nprocs=0,  # use all available processors
+            nwalkers=100000,
+        )
+
+    def solar_radiation():
+        print("Calculating solar radiation...")
+        # Winter Solstice
+        global_rad_356 = "global_rad_356"
+        insol_time_356 = "insol_time_356"
+        # refl_rad_356 = "refl_rad_356"
+        day_356 = 356
+
+        # Summer Solstice
+        global_rad_172 = "global_rad_172"
+        insol_time_172 = "insol_time_172"
+        # refl_rad_172 = "refl_rad_172"
+        day_172 = 172
+
+        # Winter solstice
+        tools.r_sun(
+            elevation=LIDAR_DTM_NAME,
+            slope=f"{LIDAR_DTM_NAME}_slope",
+            aspect=f"{LIDAR_DTM_NAME}_aspect",
+            glob_rad=global_rad_356,
+            insol_time=insol_time_356,
+            day=day_356
+        )
+
+        # Summer solstice
+        tools.r_sun(
+            elevation=LIDAR_DTM_NAME,
+            slope=f"{LIDAR_DTM_NAME}_slope",
+            aspect=f"{LIDAR_DTM_NAME}_aspect",
+            glob_rad=global_rad_172,
+            insol_time=insol_time_172,
+            day=day_172
+        )
+
+        color_scheme = """
+        0% black
+        500 #091f3a
+        1000 #1e4271
+        1500 #4575b4
+        2000 #74add1
+        2500 #abd9e9
+        3000 #e0f3f8
+        4000 #ffffbf
+        5000 #fee090
+        6000 #fdae61
+        8000 #f46d43
+        8500 #d73027
+        9000 #b30000
+        9250 #ae017e
+        100% #613a44
+        """
+        tools.r_colors(
+            map=[global_rad_356, global_rad_172],
+            rules=StringIO(color_scheme)
+        )
+
+        aoi_map_figure(
+            tools=tools,
+            map_name=global_rad_356,
+            relief=LIDAR_DTM_RELIEF,
+            legend_units="Wh/m\u00b2",  # unicode for squared
+            legend_flags="bt",
+        )
+
+        aoi_map_figure(
+            tools=tools,
+            map_name=global_rad_172,
+            relief=LIDAR_DTM_RELIEF,
+            legend_units="Wh/m\u00b2",  # unicode for squared
+            legend_flags="bt",
+        )
+
     # Create a new project
     try:
         gs.create_project(path=PROJECT_NAME, epsg="2193")
@@ -676,18 +807,18 @@ def main():
             res=1,
             flags="a"
         ):
-            tools.r_relief(
-                input=LIDAR_DTM_NAME,
-                output=LIDAR_DTM_RELIEF,
-                quiet=True
-            )
-            compute_second_order_derivatives(tools=tools, input=LIDAR_DTM_NAME)
+            # tools.r_relief(
+            #     input=LIDAR_DTM_NAME,
+            #     output=LIDAR_DTM_RELIEF,
+            #     quiet=True
+            # )
+            # compute_second_order_derivatives(tools=tools, input=LIDAR_DTM_NAME)
 
             # Compute flow accumulation using multiple methods
             flow_accumulation(
                 tools=tools,
                 input=LIDAR_DTM_NAME,
-                threshold=10000
+                threshold=50000
             )
 
             # Calculate TWI
@@ -703,11 +834,24 @@ def main():
                 elevation=LIDAR_DTM_NAME,
                 flow_accumulation="d8_mfd_flowaccum",
                 flow_direction="d8_mfd_flowdir",
-                threshold=10000
+                threshold=50000
             )
 
             # HAND method
-            hand_method()
+            # hand_method()
+
+            # Mask to basin 14 for overland flow and erosion/deposition
+            with gs.MaskManager():
+                tools.r_mask(raster="d8_mfd_basins", maskcats="14")
+
+                # Overland flow simulation
+                # overland_flow()
+
+                # Erosion and deposition
+                # erosion()
+
+            # Solar radiation
+            solar_radiation()
 
 
 if __name__ == "__main__":
