@@ -9,3 +9,5 @@ r.skyline
 r.hand
 v.surf.rst.cv
 r.hydrobasin
+r.colors.matplotlib
+r.tpi
