@@ -28,7 +28,7 @@ import os
 import subprocess
 import sys
 from io import StringIO
-
+from PIL import Image
 
 # Configuration
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -36,18 +36,22 @@ PROJECT_NAME = Path(PROJECT_DIR, "ponui")
 MAPSET_NAME = "PERMANENT"
 
 DSM_PATH = Path(PROJECT_DIR, "data/dsm.cog.tif")
-DSM_NAME = "dsm"
+DSM_NAME = "dsm_10m"
 
 DTM_PATH = Path(PROJECT_DIR, "data/dtm.cog.tif")
-DTM_NAME = "dem"
+DTM_NAME = "dem_10m"
 DTM_RELIEF = "dtm_relief"
+
+ISLAND_RESOLUTION = 10  # meters
 
 LIDAR_PATH = Path(PROJECT_DIR, "data/lidar.laz")
 LIDAR_DTM_10M = "lidar_dtm_10m"
-LIDAR_DTM_NAME = "lidar_dtm"
-LIDAR_DTM_RELIEF = "lidar_dtm_relief"
+LIDAR_DTM_1M = "lidar_dtm_1m"
+LIDAR_DTM_1M_RELIEF = "lidar_dtm_1m_relief"
+LIDAR_DTM_1M_SKYVIEW = "lidar_dtm_1m_skyview"
 
 AOI_REGION = "aoi"
+AOI_RESOLUTION = 1  # meters
 SAVE_DIR = Path(PROJECT_DIR, "figures")
 
 
@@ -64,6 +68,24 @@ def _check_platform():
     else:
         print(f"Unknown platform ID: {platform_id}")
     return platform_id
+
+
+def save_jpeg(image: Image.Image, output_path: Path) -> None:
+    try:
+        # Open the image
+        with Image.open(image) as im:
+            # Check if the image has an alpha channel and convert to RGB
+            if im.mode in ("RGBA", "P"):
+                im = im.convert("RGB") # Discard the alpha channe
+            # Save the image with 300 DPI specified in the metadata
+            # For JPEG format
+            im.save(output_path, "JPEG", dpi=(300, 300))
+            print(f"Image successfully saved to {output_path} with 300 DPI.")
+
+    except FileNotFoundError:
+        print(f"Error: The file '{output_path}' was not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 
 def main():
@@ -92,72 +114,84 @@ def main():
             legend_flags: str = "bt"
     ) -> gj.Map:
         univar_json = tools.r_univar(map=map_name, format="json").json
-        figure_output = Path(SAVE_DIR, f"{map_name}.png")
+        figure_output = Path(SAVE_DIR, f"{map_name}")
         print(f"Saving AOI map figure to {figure_output}")
         m = gj.Map(width=800, use_region=True)
         m.d_shade(color=map_name, shade=relief)
+        # m.d_vect(map="grid_1k_1k", type="boundary", color="grey", width=2)
+        m.d_grid(size="00:01:10", color="grey", fontsize=16, flags="ga")
+        m.d_vect(map=AOI_REGION, type="boundary", color="black", width=3)
 
         m.d_legend(
             raster=map_name,
-            at="4,38,84,86",
+            at="8,30,5,8",
             font="Fira Sans Condensed Light",
-            fontsize=12,
-            border_color="none",
+            fontsize=24,
+            border_color="black",
             units=legend_units,
             range=f"{univar_json['min']},{univar_json['max']}",
             flags=legend_flags,
         )
-        m.d_barscale(at=(1, 5), flags="n")
-        m.save(filename=figure_output)
+        m.d_barscale(
+            at=(1, 5), font="Fira Sans Condensed Light", fontsize=24, flags="n"
+        )
+
+        save_jpeg(m.filename, f"{figure_output}.jpg")
+        m.save(filename=f"{figure_output}.png")
         return m
 
     def aoi_map_figure(
             tools: Tools,
             map_name: str,
             relief: str,
-            legend_units: str = "none",
+            legend_units: str = "",
             legend_flags: str = "bt",
+            legend_range_min: float | None = None,
             legend_range_max: float | None = None,
     ) -> gj.Map:
 
-        figure_output = Path(SAVE_DIR, f"{map_name}_aoi.png")
+        figure_output = Path(SAVE_DIR, f"{map_name}_aoi")
         print(f"Saving AOI map figure to {figure_output}")
-        m = gj.Map(width=800, saved_region=AOI_REGION)
+        m = gj.Map(width=800,
+                #    saved_region=AOI_REGION
+                    use_region=True   
+                )
         m.d_shade(color=map_name, shade=relief)
 
         univar_json = tools.r_univar(map=map_name, format="json").json
-        legend_range = f"{univar_json['min']},{univar_json['max']}"
-
-        if legend_range_max is not None:
-            legend_range = f"{univar_json['min']},{legend_range_max}"
+        _range_min = legend_range_min if legend_range_min is not None else univar_json['min']
+        _range_max = legend_range_max if legend_range_max is not None else univar_json['max']
+        legend_range = f"{_range_min},{_range_max}"
 
         m.d_legend(
             raster=map_name,
-            at="4,38,84,86",
+            # at="4,38,84,86",
+            at="10,38,4,8",
             font="Fira Sans Condensed Light",
-            fontsize=12,
+            fontsize=21,
             border_color="none",
-            units=legend_units if legend_units != "" else f" {legend_units}",
+            # units=legend_units if legend_units != "" else f" {legend_units}",
             range=legend_range,
             flags=legend_flags,
         )
         m.d_barscale(
             at=(1, 5),
             font="Fira Sans Condensed Light",
-            fontsize=16,
+            fontsize=21,
             length=250,
             flags="n",
         )
-        m.save(filename=figure_output)
+        save_jpeg(m.filename, f"{figure_output}.jpg")
+        m.save(filename=f"{figure_output}.png")
         return m
 
     def install_grass_addons():
         """
         Install required GRASS addons from the gextensions file in parallel.
         """
-        print("Installing GRASS addons...")
+        print("Installing GRASS addons:")
         try:
-            extensions_path = Path("gextensions.txt")
+            extensions_path = Path(PROJECT_DIR, "gextensions.txt")
             with extensions_path.open() as f:
                 exts = [
                     line.strip() for line in f if line.strip() and not line.lstrip().startswith("#")
@@ -215,17 +249,14 @@ def main():
                     sys.exit(1)
 
             # Save and display the resampled map
-            m = gj.Map(
-                use_region=False,
-                filename=f"{SAVE_DIR}/{resampled_name}.png"
-            )
+            m = gj.Map(use_region=False)
             m.d_rast(map=resampled_name)
             m.d_region_grid(raster=resampled_name, flags="")
-            m.show()
+            m.save(filename=f"{SAVE_DIR}/{resampled_name}.png")
 
     def import_dem_data(tools: Tools, res: float) -> None:
         """Import DSM and DTM data into GRASS at specified resolution."""
-        print("Importing DSM and DTM data...")
+        print(f"Importing DSM and DTM data at {res}m...")
         try:
             # Import DSM
             tools.r_import(
@@ -234,8 +265,8 @@ def main():
                 resample="bilinear",
                 resolution="value",
                 resolution_value=res,
-                title="Ponui Island 10m DSM",
-                quiet=True
+                title=f"Ponui Island {res}m DSM",
+                quiet=True,
             )
 
             # Import DEM
@@ -245,8 +276,8 @@ def main():
                 resample="bilinear",
                 resolution="value",
                 resolution_value=res,
-                title="Ponui Island 10m DTM",
-                quiet=True
+                title=f"Ponui Island {res}m DSM",
+                quiet=True,
             )
 
             print("Importing LiDAR data and creating mean DTM...")
@@ -256,7 +287,7 @@ def main():
                 output=LIDAR_DTM_10M,
                 method="mean",
                 resolution=res,
-                return_filter="last",
+                class_filter="2",
                 flags="we",
                 quiet=True
             )
@@ -277,30 +308,24 @@ def main():
 
         # Interpolate LiDAR ground points to create DTM using RST
         # Only within the AOI region at 1m resolution
-        with gs.RegionManager(region=AOI_REGION, res=1, flags="a"):
+        with gs.RegionManager(region=AOI_REGION, res=AOI_RESOLUTION, flags="a"):
             print("Creating LiDAR DTM using RST...")
             tools.v_surf_rst(
                 input="lidar_be",
-                elevation=LIDAR_DTM_NAME,
+                elevation=LIDAR_DTM_1M,
                 smooth=0.5,
                 tension=20,
                 quiet=True,
             )
             tools.r_relief(
-                input=LIDAR_DTM_NAME,
-                output=LIDAR_DTM_RELIEF,
+                input=LIDAR_DTM_1M,
+                output=LIDAR_DTM_1M_RELIEF,
                 quiet=True
             )
-            tools.r_colors(map=LIDAR_DTM_NAME, color="elevation")
-            aoi_map_figure(
-                tools=tools,
-                map_name=LIDAR_DTM_NAME,
-                relief=LIDAR_DTM_RELIEF,
-                legend_units="m",
-                legend_flags="bst"
-            )
+            tools.r_colors(map=LIDAR_DTM_1M, color="elevation")
 
-    def compute_second_order_derivatives(tools: Tools, input: str) -> None:
+
+    def compute_second_order_derivatives(tools: Tools, input: str) -> list[str]:
         """Compute second order derivatives of the DEM."""
         print("Computing second order derivatives...")
         slope = f"{input}_slope"
@@ -321,57 +346,90 @@ def main():
             quiet=True
         )
 
-        # Generate map figures
         tools.r_colors(map=slope, color="sepia", flags="e")
-        aoi_map_figure(
-            tools=tools,
-            map_name=slope,
-            relief="dtm_relief",
-            legend_units="\u00b0"  # unicode degree symbol
+        tools.r_colors(map=slope, color="sepia", flags="e")
+        aspect_color_scheme = """
+        0       0:60:170      # North
+        90      0:150:60      # East
+        180     240:210:60    # South
+        270     180:40:40     # West
+        360     0:60:170      # North
+        """
+        cb_safe_aspect_color_scheme = """
+        0      54:75:154      # deep blue (North)
+        45     70:120:194     # blue–cyan
+        90     88:166:214     # cyan (East)
+        135    120:197:191    # teal
+        180    190:215:141    # yellowish (South)
+        225    232:196:107    # warm yellow–orange
+        270    227:158:167    # pink (West)
+        315    170:120:195    # purple
+        360    54:75:154      # deep blue (wraps to 0°)
+        """
+        # tools.r_colors_matplotlib(map=aspect, color="BrBG", flags="e")
+        tools.r_colors(
+            map=aspect, rules=StringIO(cb_safe_aspect_color_scheme), flags="e"
         )
+        return [slope, aspect, pcurv, tcurv]
 
-        tools.r_colors(map=aspect, color="aspectcolr", flags="e")
-        aoi_map_figure(
-            tools=tools,
-            map_name=aspect,
-            relief="dtm_relief",
-            legend_units="\u00b0",  # unicode degree symbol
-        )
-        aoi_map_figure(
-            tools=tools,
-            map_name=pcurv,
-            relief="dtm_relief"
-        )
-        aoi_map_figure(
-            tools=tools,
-            map_name=tcurv,
-            relief="dtm_relief"
-        )
+    def second_order_derivative_island_figures(
+            tools: Tools,
+            slope: str,
+            aspect: str,
+            pcurv: str,
+            tcurv: str,
+            relief: str
+    ) -> None:
+        """Generate figures for second order derivatives over the full island."""
         # Create full region figures
         full_region_map_figure(
             tools=tools,
             map_name=aspect,
-            relief="dtm_relief",
+            relief=relief,
             legend_units="\u00b0",  # unicode degree symbol
         )
         full_region_map_figure(
             tools=tools,
             map_name=slope,
-            relief="dtm_relief",
+            relief=relief,
             legend_units="\u00b0",  # unicode degree symbol
         )
         full_region_map_figure(
-            tools=tools,
-            map_name=pcurv,
-            relief="dtm_relief",
-            legend_units="none"
+            tools=tools, map_name=pcurv, relief=relief, legend_units=""
         )
         full_region_map_figure(
-            tools=tools,
-            map_name=tcurv,
-            relief="dtm_relief",
-            legend_units="none"
+            tools=tools, map_name=tcurv, relief=relief, legend_units=""
         )
+
+    def second_order_derivative_aoi_figures(
+            tools: Tools,
+            slope: str,
+            aspect: str,
+            pcurv: str,
+            tcurv: str,
+            relief: str
+    ) -> None:
+        """Generate figures for second order derivatives over the AOI."""
+        # Generate map figures
+        aoi_map_figure(
+            tools=tools,
+            map_name=slope,
+            relief=relief,
+            legend_units="\u00b0",  # unicode degree symbol
+        )
+
+        aoi_map_figure(
+            tools=tools,
+            map_name=aspect,
+            relief=relief,
+            legend_units="\u00b0",  # unicode degree symbol
+        )
+        aoi_map_figure(
+            tools=tools,
+            map_name=pcurv,
+            relief=relief
+        )
+        aoi_map_figure(tools=tools, map_name=tcurv, relief=relief)
 
     def flow_accumulation(tools: Tools, input: str, threshold: int) -> None:
         """Compute flow accumulation using multiple methods."""
@@ -422,24 +480,24 @@ def main():
         aoi_map_figure(
             tools=tools,
             map_name="d8_mfd_flowaccum",
-            relief=LIDAR_DTM_RELIEF,
-            legend_units="cells",
+            relief=LIDAR_DTM_1M_RELIEF,
+            legend_units="",
             legend_flags="blt",
         )
 
         aoi_map_figure(
             tools=tools,
             map_name="d8_sfd_flowaccum",
-            relief=LIDAR_DTM_RELIEF,
-            legend_units="cells",
+            relief=LIDAR_DTM_1M_RELIEF,
+            legend_units="",
             legend_flags="blt",
         )
 
         aoi_map_figure(
             tools=tools,
             map_name="dinf_sfd_flowaccum",
-            relief=LIDAR_DTM_RELIEF,
-            legend_units="cells",
+            relief=LIDAR_DTM_1M_RELIEF,
+            legend_units="",
             legend_flags="bt",
         )
 
@@ -452,8 +510,8 @@ def main():
         aoi_map_figure(
             tools=tools,
             map_name="MEFA_flowaccum",
-            relief=LIDAR_DTM_RELIEF,
-            legend_units="cells",
+            relief=LIDAR_DTM_1M_RELIEF,
+            legend_units="",
             legend_flags="blt",
             # legend_range_max="30000"
         )
@@ -469,7 +527,7 @@ def main():
         aoi_map_figure(
             tools=tools,
             map_name="twi",
-            relief=LIDAR_DTM_RELIEF,
+            relief=LIDAR_DTM_1M_RELIEF,
             legend_units="none",
             legend_flags="bt",
         )
@@ -495,7 +553,7 @@ def main():
             """
             tools.r_colors(map="ocean", rules=StringIO(color_scheme))
             m.d_rast(map="ocean")
-            m.d_shade(color="lidar_dtm_slope", shade=LIDAR_DTM_RELIEF)
+            m.d_shade(color="lidar_dtm_slope", shade=LIDAR_DTM_1M_RELIEF)
             m.d_vect(
                 map=map_name,
                 type="line",
@@ -552,7 +610,7 @@ def main():
     def hand_method():
         print("Calculating Height Above Nearest Drainage (HAND)...")
         tools.r_hand(
-            elevation=LIDAR_DTM_NAME,
+            elevation=LIDAR_DTM_1M,
             streams="d8_mfd_streams",
             direction="d8_mfd_flowdir",
             inundation_raster="inundation",
@@ -568,7 +626,7 @@ def main():
         aoi_map_figure(
             tools=tools,
             map_name="hand",
-            relief=LIDAR_DTM_RELIEF,
+            relief=LIDAR_DTM_1M_RELIEF,
             legend_units="m",
             legend_flags="bt",
         )
@@ -597,7 +655,7 @@ def main():
         aoi_map_figure(
             tools=tools,
             map_name="hand_class",
-            relief=LIDAR_DTM_RELIEF,
+            relief=LIDAR_DTM_1M_RELIEF,
             legend_units="",
             legend_flags="btc",
         )
@@ -605,36 +663,157 @@ def main():
         aoi_map_figure(
             tools=tools,
             map_name="inundation_strds_5.0",
-            relief=LIDAR_DTM_RELIEF,
+            relief=LIDAR_DTM_1M_RELIEF,
             legend_units="m",
             legend_flags="bt",
         )
 
+    def aoi_3d_figure(
+        mapcolor: str,
+        elevation: str,
+        output_name: str,
+        legend_units: str = "",
+        legend_flags="btd",
+        legend_range_min=None,
+        legend_range_max=None
+    ) -> None:
+        print(f"Creating 3D figure: {output_name}...")
+        m = gj.Map3D(width=800, height=800, resolution_fine=1)
+        m.render(
+            elevation_map=elevation,
+            color_map=mapcolor,
+            resolution_fine=1,
+            volume="inundation_3d",
+            volume_position="0,0,1500",
+            isosurf_color_map="inundation_3d",
+            isosurf_color_value="100:100:100",
+            isosurf_level="1:1,1:2,1:3,1:4,1:5,1:6",
+            height=1200,
+            position="0.40,0.05",
+            perspective=30,
+            twist=0,
+            zexag=1.0,
+            focus="550,700,0",
+            bgcolor="255:255:255",
+            light_position="-0.80,0.20,0.75",
+            light_brightness=80,
+            light_ambient=20,
+            light_color="255:255:255",
+            fringe_elevation=0,
+            fringe=["nw", "ne", "se", "sw"],
+            arrow_position=[90, 480],
+            arrow_size=200,
+            arrow_color="0:0:0",
+            flags="nb"
+        )
+
+        univar_json = tools.r_univar(map=mapcolor, format="json").json
+        _range_min = legend_range_min if legend_range_min is not None else univar_json['min']
+        _range_max = legend_range_max if legend_range_max is not None else univar_json['max']
+        legend_range = f"{_range_min},{_range_max}"
+        m.overlay.d_legend(
+            raster=mapcolor,
+            at="12,17,8,44",
+            font="Fira Sans Condensed Light",
+            fontsize=21,
+            border_color="none",
+            title=f"{legend_units}",
+            range=legend_range,
+            flags=legend_flags,
+
+        )
+        m.overlay.d_barscale(
+            at=(1, 5), font="Fira Sans Condensed Light", fontsize=21, length=250, flags="n"
+        )
+        m.save(filename=Path(SAVE_DIR, f"{output_name}_aoi_3d.png"))
+        save_jpeg(m.filename, Path(SAVE_DIR, f"{output_name}_aoi_3d.jpg"))
+
+    def volumetric_analysis():
+        print("Calculating volumetric analysis...")
+
+        with gs.RegionManager(
+            raster="inundation_strds_5.0",
+            res=1,
+            res3=1,
+            t=200,
+            b=0,
+            flags="ap3"
+        ):
+
+            tools.t_rast_to_rast3(
+                input="inundation_strds",
+                output="inundation_3d"
+            )
+
+            tools.r3_info(map="inundation_3d")
+
+            # 3D Flow to outlets
+            # dtm_z_3d = f"{LIDAR_DTM_1M}_3d"
+            # dtm_dx_3d = f"{LIDAR_DTM_1M}_dx_3d"
+            # dtm_dy_3d = f"{LIDAR_DTM_1M}_dy_3d"
+            # tools.r_to_rast3(input=LIDAR_DTM_1M, output=dtm_z_3d)
+            # tools.r_to_rast3(input=f"{LIDAR_DTM_1M}_dx", output=dtm_dx_3d)
+            # tools.r_to_rast3(input=f"{LIDAR_DTM_1M}_dy", output=dtm_dy_3d)
+            # tools.r3_flow(
+            #     # input="inundation_3d",
+            #     vector_field=[dtm_dx_3d, dtm_dy_3d, dtm_z_3d],
+            #     flowline="flow3d",
+            #     flowaccumulation="flow3d",
+            # )
+
+            m = gj.Map3D(width=800, resolution_fine=1)
+
+            # Full list of options m.nviz.image
+            # https://grass.osgeo.org/grass84/manuals/m.nviz.image.html
+            m.render(
+                elevation_map=LIDAR_DTM_1M,
+                color_map=f"{LIDAR_DTM_1M}_slope",
+                resolution_fine=1,
+                volume="inundation_3d",
+                arrow_position=[100, 50],
+                volume_shading="gouraud",
+                volume_resolution=1,
+                volume_position="0,0,100",
+                isosurf_level="1:100.0,1:150.0,1:200.0,1:250.0,1:300.0,1:350.0",
+                # isosurf_level="1:5.0,1:4.0,1:3.0,1:2.0,1:1.0,1:0.0",
+                isosurf_color_map="inundation_3d",
+                isosurf_color_value="100:100:100",
+                # isosurf_transp_value="0,0,0,0,0,0",
+                # position="0.84,0.16",
+                height=3000,
+                perspective=21,
+                twist=0,
+                zexag=1.0,
+                focus="815,334,0",
+                bgcolor="255:255:255",
+                light_position="0.68,-0.68,0.80",
+                light_brightness=80,
+                light_ambient=20,
+                light_color="255:255:255",
+                size="843,739",
+            )
+            # m.overlay.d_legend(
+            #     raster="inundation_3d", at=(60, 97, 87, 92)
+            # )
+            m.save(filename=Path(SAVE_DIR, "inundation_3d.png"))
+
     def overland_flow():
         gs.run_command(
             "r.sim.water",
-            elevation=LIDAR_DTM_NAME,
-            dx=f"{LIDAR_DTM_NAME}_dx",
-            dy=f"{LIDAR_DTM_NAME}_dy",
+            elevation=LIDAR_DTM_1M,
+            dx=f"{LIDAR_DTM_1M}_dx",
+            dy=f"{LIDAR_DTM_1M}_dy",
             rain_value=30,  # mm/hr (spatial uniform)
             infil_value=0.0,  # mm/hr
-            man_value=0.1,
-            niterations=10,  # event duration (minutes)
+            man_value=0.2,
+            niterations=30,  # event duration (minutes)
             output_step=2,  # minutes
             depth="depth",  # m
             discharge="disch",  # m3/s
             random_seed=3,
             nwalkers=100000,
-            nprocs=0,  # use all available processors
+            nprocs=6,  # use all available processors
             flags="t"
-        )
-
-        aoi_map_figure(
-            tools=tools,
-            map_name="depth.10",
-            relief=LIDAR_DTM_RELIEF,
-            legend_units="m",
-            legend_flags="bsl",
         )
 
     def erosion():
@@ -644,22 +823,22 @@ def main():
         tools.r_mapcalc(expression="shear_stress = 0.01")
 
         tools.r_sim_sediment(
-            elevation=LIDAR_DTM_NAME,
-            dx=f"{LIDAR_DTM_NAME}_dx",
-            dy=f"{LIDAR_DTM_NAME}_dy",
-            water_depth="depth.10",  # meters
+            elevation=LIDAR_DTM_1M,
+            dx=f"{LIDAR_DTM_1M}_dx",
+            dy=f"{LIDAR_DTM_1M}_dy",
+            water_depth="depth.30",  # meters
             detachment_coeff="detin",  # [s/m]
             transport_coeff="tranin",  # [s]
             shear_stress="shear_stress",  # [Pa]
-            man_value=0.1,
+            man_value=0.2,
             transport_capacity="transport_capacity",
             tlimit_erosion_deposition="tlimit_erosion_deposition",
             sediment_flux="sediment_flux",
             erosion_deposition="erosion_deposition",
-            niterations=10,
+            niterations=30,
             output_step=2,
             random_seed=3,
-            nprocs=0,  # use all available processors
+            nprocs=6,  # use all available processors
             nwalkers=100000,
         )
 
@@ -679,9 +858,9 @@ def main():
 
         # Winter solstice
         tools.r_sun(
-            elevation=LIDAR_DTM_NAME,
-            slope=f"{LIDAR_DTM_NAME}_slope",
-            aspect=f"{LIDAR_DTM_NAME}_aspect",
+            elevation=LIDAR_DTM_1M,
+            slope=f"{LIDAR_DTM_1M}_slope",
+            aspect=f"{LIDAR_DTM_1M}_aspect",
             glob_rad=global_rad_356,
             insol_time=insol_time_356,
             day=day_356
@@ -689,9 +868,9 @@ def main():
 
         # Summer solstice
         tools.r_sun(
-            elevation=LIDAR_DTM_NAME,
-            slope=f"{LIDAR_DTM_NAME}_slope",
-            aspect=f"{LIDAR_DTM_NAME}_aspect",
+            elevation=LIDAR_DTM_1M,
+            slope=f"{LIDAR_DTM_1M}_slope",
+            aspect=f"{LIDAR_DTM_1M}_aspect",
             glob_rad=global_rad_172,
             insol_time=insol_time_172,
             day=day_172
@@ -714,24 +893,44 @@ def main():
         9250 #ae017e
         100% #613a44
         """
+
+        color_scheme = """
+        0      #0b0b0b
+        500    #0d1f3a
+        1000   #1e4271
+        1500   #3a78ab
+        2000   #5aa5c9
+        2500   #86c8dd
+        3000   #b5e3f3
+        4000   #f3f9d0
+        5000   #fff3a0
+        6000   #fed675
+        7000   #fdb157
+        8000   #f9833a
+        8500   #e7552e
+        9000   #cc301d
+        9500   #a81c14
+        10000  #7a0b0b
+        """
         tools.r_colors(
             map=[global_rad_356, global_rad_172],
-            rules=StringIO(color_scheme)
+            rules=StringIO(color_scheme),
+            flags="e"
         )
 
         aoi_map_figure(
             tools=tools,
             map_name=global_rad_356,
-            relief=LIDAR_DTM_RELIEF,
-            legend_units="Wh/m\u00b2",  # unicode for squared
+            relief=LIDAR_DTM_1M_SKYVIEW,
+            legend_units=" Wh/m\u00b2",  # unicode for squared
             legend_flags="bt",
         )
 
         aoi_map_figure(
             tools=tools,
             map_name=global_rad_172,
-            relief=LIDAR_DTM_RELIEF,
-            legend_units="Wh/m\u00b2",  # unicode for squared
+            relief=LIDAR_DTM_1M_SKYVIEW,
+            legend_units=" Wh/m\u00b2",  # unicode for squared
             legend_flags="bt",
         )
 
@@ -771,7 +970,11 @@ def main():
 
         # Compute relief
         print("Computing relief...")
-        tools.r_relief(input=DTM_NAME, output=DTM_RELIEF, quiet=True)
+        # tools.r_relief(input=DTM_NAME, output=DTM_RELIEF, quiet=True)
+
+        # Create 1km grid for reference
+        tools.v_mkgrid(map="grid_1k_1k", box="1000,1000")
+        tools.v_extract(input="grid_1k_1k", cats=27, output=AOI_REGION)
 
         print("Computing skyview factor...")
         tools.r_skyview(input=DTM_NAME, output="lidar_dtm_skyview", ndir=8)
@@ -784,7 +987,19 @@ def main():
         )
 
         # Compute second order derivatives and save results
-        compute_second_order_derivatives(tools=tools, input=DTM_NAME)
+        slope, aspect, pcurv, tcurv = compute_second_order_derivatives(
+            tools=tools,
+            input=DTM_NAME
+        )
+
+        second_order_derivative_island_figures(
+            tools=tools,
+            slope=slope,
+            aspect=aspect,
+            pcurv=pcurv,
+            tcurv=tcurv,
+            relief=DTM_RELIEF
+        )
 
         # Create save region AOI
         tools.g_region(
@@ -799,59 +1014,298 @@ def main():
 
         # Import LiDAR data and create a 1m DTM
         # process_lidar_data(tools=tools)
-        set_ocean_to_null(elevation_map=LIDAR_DTM_NAME)
+        set_ocean_to_null(elevation_map=LIDAR_DTM_1M)
+
         # Compute flow accumulation using multiple methods
         with gs.RegionManager(
             region=AOI_REGION,
-            raster=LIDAR_DTM_NAME,
+            raster=LIDAR_DTM_1M,
             res=1,
             flags="a"
         ):
-            # tools.r_relief(
-            #     input=LIDAR_DTM_NAME,
-            #     output=LIDAR_DTM_RELIEF,
-            #     quiet=True
-            # )
-            # compute_second_order_derivatives(tools=tools, input=LIDAR_DTM_NAME)
+            tools.r_relief(
+                input=LIDAR_DTM_1M,
+                output=LIDAR_DTM_1M_RELIEF,
+                quiet=True
+            )
+            print("Computing skyview factor...")
+            tools.r_skyview(input=LIDAR_DTM_1M, output=LIDAR_DTM_1M_SKYVIEW, ndir=8)
+            aoi_map_figure(
+                tools=tools,
+                map_name=LIDAR_DTM_1M,
+                relief=LIDAR_DTM_1M_RELIEF,
+                legend_units="m",
+                legend_flags="bst"
+            )
+
+            slope, aspect, pcurv, tcurv = compute_second_order_derivatives(
+                tools=tools, input=LIDAR_DTM_1M
+            )
+
+            second_order_derivative_aoi_figures(
+                tools=tools,
+                slope=slope,
+                aspect=aspect,
+                pcurv=pcurv,
+                tcurv=tcurv,
+                relief=LIDAR_DTM_1M_RELIEF,
+            )
 
             # Compute flow accumulation using multiple methods
             flow_accumulation(
                 tools=tools,
-                input=LIDAR_DTM_NAME,
-                threshold=50000
+                input=LIDAR_DTM_1M,
+                threshold=100000
             )
 
             # Calculate TWI
             twi_calculation(
                 tools=tools,
-                flow_accumulation="d8_sfd_flowaccum",
-                slope=f"{LIDAR_DTM_NAME}_slope"
+                flow_accumulation="d8_mfd_flowaccum",
+                slope=f"{LIDAR_DTM_1M}_slope"
             )
 
             # Delineate streams and watersheds
             stream_deliniation(
                 tools=tools,
-                elevation=LIDAR_DTM_NAME,
+                elevation=LIDAR_DTM_1M,
                 flow_accumulation="d8_mfd_flowaccum",
                 flow_direction="d8_mfd_flowdir",
                 threshold=50000
             )
 
             # HAND method
-            # hand_method()
+            hand_method()
 
+            # TPI calculation
+            print("Calculating Topographic Position Index (TPI)...")
+            tools.r_tpi(
+                input=LIDAR_DTM_1M,
+                output="tpi"
+            )
+            tpi_color_scheme = """
+            0%     10:76:107
+            25%    220:245:255
+            50%    255:247:220
+            75%    255:230,220
+            100%   107:78:76
+            """
+            tools.r_colors(map="tpi", rules=StringIO(tpi_color_scheme), flags="e")
+            aoi_map_figure(
+                tools=tools,
+                map_name="tpi",
+                relief=LIDAR_DTM_1M_RELIEF,
+                legend_units="none",
+                legend_flags="bt",
+            )
+
+            tools.r_to_vect(input="d8_mfd_basins", output="d8_mfd_basins", type="area")
+            tools.v_extract(input="d8_mfd_basins", cats="2", output="basin")
             # Mask to basin 14 for overland flow and erosion/deposition
-            with gs.MaskManager():
-                tools.r_mask(raster="d8_mfd_basins", maskcats="14")
+            with gs.RegionManager(vector="basin", res=1, flags="a"):
+                with gs.MaskManager():
+                    tools.r_mask(vector="basin")
 
-                # Overland flow simulation
-                # overland_flow()
+                    # Overland flow simulation
+                    # overland_flow()
+                    # tools.r_mapcalc(expression="max_depth = if(depth.10 >= 0.005, depth.10, null())", quiet=True)
+                    # tools.r_colors(map="max_depth", raster="depth.10", flags="g")
+                    # Erosion and deposition
+                    # erosion()
 
-                # Erosion and deposition
-                # erosion()
+            # Depth figure
+            aoi_map_figure(
+                tools=tools,
+                map_name="depth.10",
+                relief=LIDAR_DTM_1M_RELIEF,
+                legend_flags="bsl",
+            )
+
+            aoi_map_figure(
+                tools=tools,
+                map_name="max_depth",
+                relief=LIDAR_DTM_1M_RELIEF,
+                legend_flags="bsl",
+            )
+
+            # Erosion and deposition figure
+            aoi_map_figure(
+                tools=tools,
+                map_name="erosion_deposition",
+                relief=LIDAR_DTM_1M_RELIEF,
+                legend_flags="bt",
+            )
 
             # Solar radiation
-            solar_radiation()
+            # solar_radiation()
+
+            # Volumetric analysis
+            # volumetric_analysis()
+
+        with gs.RegionManager(
+            raster="inundation_strds_5.0",
+            res=1,
+            res3=5,
+            t=100,
+            b=0,
+            flags="ap3"
+        ):
+            # 3D figures
+            aoi_3d_figure(
+                mapcolor=LIDAR_DTM_1M,
+                elevation=LIDAR_DTM_1M,
+                output_name=LIDAR_DTM_1M,
+                legend_units="Elevation [m]"
+            )
+            aoi_3d_figure(
+                mapcolor=f"{LIDAR_DTM_1M}_slope",
+                elevation=LIDAR_DTM_1M,
+                output_name=f"{LIDAR_DTM_1M}_slope",
+                legend_units="Slope [\u00b0]",
+            )
+            aoi_3d_figure(
+                mapcolor=f"{LIDAR_DTM_1M}_aspect",
+                elevation=LIDAR_DTM_1M,
+                output_name=f"{LIDAR_DTM_1M}_aspect",
+                legend_units="Aspect [\u00b0]",
+            )
+
+            # curvature_color_scheme = """
+            # 0% black
+            # -0.1 12,44,132
+            # -0.05 34,94,168
+            # -0.03 29,145,192
+            # -0.02 65,182,196
+            # -0.015 127,205,187
+            # -0.01 199,233,180
+            # 0 white
+            # 0.01 255,255,178
+            # 0.015 254,217,118
+            # 0.02 254,178,76
+            # 0.03 253,141,60
+            # 0.05 252,78,42
+            # 0.1 227,26,28
+            # 100% 177,0,38
+            # """
+
+            curvature_color_scheme = """
+            0% 34,94,168
+            10% 29,145,192
+            25% 65,182,196
+            30% 127,205,187
+            45% 199,233,180
+            50% white
+            55% 255,255,178
+            60% 254,217,118
+            75% 254,178,76
+            90% 253,141,60
+            100% 252,78,42
+            """
+
+            # tools.r_colors(map=f"{LIDAR_DTM_1M}_pcurv", raster=f"{LIDAR_DTM_1M}_pcurv", scale="0.001", flags="g")
+            tools.r_colors(
+                map=f"{LIDAR_DTM_1M}_pcurv",
+                rules=StringIO(curvature_color_scheme),
+                scale="0.001",
+                flags="e"
+            )
+            aoi_3d_figure(
+                mapcolor=f"{LIDAR_DTM_1M}_pcurv",
+                elevation=LIDAR_DTM_1M,
+                output_name=f"{LIDAR_DTM_1M}_pcurv",
+                legend_units="Profile Curvature"
+            )
+            aoi_3d_figure(
+                mapcolor=f"{LIDAR_DTM_1M}_tcurv",
+                elevation=LIDAR_DTM_1M,
+                output_name=f"{LIDAR_DTM_1M}_tcurv",
+                legend_units="Tangential Curvature",
+            )
+            aoi_3d_figure(
+                mapcolor="max_depth",
+                elevation=LIDAR_DTM_1M,
+                output_name="max_depth",
+                legend_flags="bsld",
+                legend_units="Water Depth [m]",
+            )
+            aoi_3d_figure(
+                mapcolor="erosion_deposition",
+                elevation=LIDAR_DTM_1M,
+                output_name="erosion_deposition",
+                legend_flags="bsd",
+                legend_units="Erosion/Deposition [kg/m\u00b2s]",
+            )
+            aoi_3d_figure(
+                mapcolor="global_rad_172",
+                elevation=LIDAR_DTM_1M,
+                output_name="global_rad_172",
+                legend_units="Global solar radiation [Wh/m\u00b2]",
+            )
+            aoi_3d_figure(
+                mapcolor="global_rad_356",
+                elevation=LIDAR_DTM_1M,
+                output_name="global_rad_365",
+                legend_units="Global solar radiation [Wh/m\u00b2]",
+            )
+            aoi_3d_figure(mapcolor="twi", elevation=LIDAR_DTM_1M, output_name="twi", legend_units="TWI",)
+
+            # aoi_3d_figure(
+            #     mapcolor="global_rad_356",
+            #     elevation=LIDAR_DTM_1M,
+            #     output_name="global_rad_365",
+            #     legend_units="Global solar radiation [Wh/m\u00b2]",
+            # )
+
+            aoi_3d_figure(
+                mapcolor="d8_mfd_flowaccum",
+                elevation=LIDAR_DTM_1M,
+                legend_units="Flow Accumulation [D8 MFD]",
+                legend_flags="blt",
+                legend_range_min=1,
+                output_name="d8_mfd_flowaccum_aoi_3d",
+            )
+
+            aoi_3d_figure(
+                mapcolor="d8_sfd_flowaccum",
+                elevation=LIDAR_DTM_1M,
+                legend_range_min=1,
+                legend_units="Flow Accumulation [D8 SFD]",
+                legend_flags="blt",
+                output_name="d8_sfd_flowaccum_aoi_3d",
+            )
+
+            aoi_3d_figure(
+                mapcolor="dinf_sfd_flowaccum",
+                elevation=LIDAR_DTM_1M,
+                legend_units="Flow Accumulation [D-infinity SFD]",
+                legend_range_min=1,
+                legend_flags="btl",
+                output_name="dinf_sfd_flowaccum_aoi_3d",
+            )
+
+            aoi_3d_figure(
+                mapcolor="hand_class",
+                elevation=LIDAR_DTM_1M,
+                legend_units="Water Table Class",
+                legend_flags="btdc",
+                output_name="hand_class_aoi_3d",
+            )
+
+            aoi_3d_figure(
+                mapcolor="hand",
+                elevation=LIDAR_DTM_1M,
+                legend_units="Hieght above nearest drainage (HAND) [m]",
+                legend_flags="bdt",
+                output_name="hand_aoi_3d",
+            )
+
+            aoi_3d_figure(
+                mapcolor="inundation_strds_5.0",
+                elevation=LIDAR_DTM_1M,
+                legend_units="Inundation [m]",
+                legend_flags="bdt",
+                output_name="inundation_strds_5.0_aoi_3d",
+            )
 
 
 if __name__ == "__main__":
