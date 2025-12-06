@@ -324,7 +324,6 @@ def main():
             )
             tools.r_colors(map=LIDAR_DTM_1M, color="elevation")
 
-
     def compute_second_order_derivatives(tools: Tools, input: str) -> list[str]:
         """Compute second order derivatives of the DEM."""
         print("Computing second order derivatives...")
@@ -673,21 +672,29 @@ def main():
         elevation: str,
         output_name: str,
         legend_units: str = "",
+        legend_at="12,17,8,44",
         legend_flags="btd",
         legend_range_min=None,
         legend_range_max=None
     ) -> None:
         print(f"Creating 3D figure: {output_name}...")
-        m = gj.Map3D(width=800, height=800, resolution_fine=1)
+        m = gj.Map3D(width=800, height=650, resolution_fine=1)
         m.render(
+            elevation_value="0",
+            color="7:97:139",
             elevation_map=elevation,
             color_map=mapcolor,
-            resolution_fine=1,
+            mode=["fine"] * 2,
+            resolution_fine=[1, 1],
+            resolution_coarse=[9, 9],
+            shading=["gouraud"] * 2,
+            style=["surface"] * 2,
+            wire_color=[
+                "136:136:136",
+                "0:0:0"
+            ],
             volume="inundation_3d",
             volume_position="0,0,1500",
-            isosurf_color_map="inundation_3d",
-            isosurf_color_value="100:100:100",
-            isosurf_level="1:1,1:2,1:3,1:4,1:5,1:6",
             height=1200,
             position="0.40,0.05",
             perspective=30,
@@ -699,12 +706,13 @@ def main():
             light_brightness=80,
             light_ambient=20,
             light_color="255:255:255",
-            fringe_elevation=0,
-            fringe=["nw", "ne", "se", "sw"],
-            arrow_position=[90, 480],
+            fringe=["nw", "se"],
+            fringe_color="139:105:20",
+            fringe_elevation=43,
+            arrow_position=[90, 420],
             arrow_size=200,
             arrow_color="0:0:0",
-            flags="nb"
+            flags="nb",
         )
 
         univar_json = tools.r_univar(map=mapcolor, format="json").json
@@ -713,7 +721,7 @@ def main():
         legend_range = f"{_range_min},{_range_max}"
         m.overlay.d_legend(
             raster=mapcolor,
-            at="12,17,8,44",
+            at=legend_at,
             font="Fira Sans Condensed Light",
             fontsize=21,
             border_color="none",
@@ -723,7 +731,18 @@ def main():
 
         )
         m.overlay.d_barscale(
-            at=(1, 5), font="Fira Sans Condensed Light", fontsize=21, length=250, flags="n"
+            at=(60, 12),
+            font="Fira Sans Condensed Light",
+            fontsize=21,
+            length=200,
+            flags=""
+        )
+        m.overlay.d_text(
+            text="Oranga Bay",
+            at=(52, 40),
+            size=3,
+            color="white",
+            font="Fira Sans Condensed Bold"
         )
         m.save(filename=Path(SAVE_DIR, f"{output_name}_aoi_3d.png"))
         save_jpeg(m.filename, Path(SAVE_DIR, f"{output_name}_aoi_3d.jpg"))
@@ -761,37 +780,94 @@ def main():
             #     flowaccumulation="flow3d",
             # )
 
-            m = gj.Map3D(width=800, resolution_fine=1)
+            m = gj.Map3D(height=949, width=739, resolution_fine=1)
 
-            # Full list of options m.nviz.image
-            # https://grass.osgeo.org/grass84/manuals/m.nviz.image.html
+            # Configure NVIZ image layers (converted from CLI-style invocation)
             m.render(
-                elevation_map=LIDAR_DTM_1M,
-                color_map=f"{LIDAR_DTM_1M}_slope",
-                resolution_fine=1,
-                volume="inundation_3d",
-                arrow_position=[100, 50],
-                volume_shading="gouraud",
-                volume_resolution=1,
-                volume_position="0,0,100",
-                isosurf_level="1:100.0,1:150.0,1:200.0,1:250.0,1:300.0,1:350.0",
-                # isosurf_level="1:5.0,1:4.0,1:3.0,1:2.0,1:1.0,1:0.0",
-                isosurf_color_map="inundation_3d",
-                isosurf_color_value="100:100:100",
-                # isosurf_transp_value="0,0,0,0,0,0",
-                # position="0.84,0.16",
-                height=3000,
-                perspective=21,
+                elevation_value=0,
+                elevation_map=",".join([
+                    f"{LIDAR_DTM_1M}@{MAPSET_NAME}",
+                    *[f"inundation_strds_{i}.0@{MAPSET_NAME}" for i in range(1, 6)],
+                ]),
+                mode=["fine"] * 7,
+                resolution_fine=[1, 1, 1, 1, 1, 1, 1],
+                resolution_coarse=[9, 9, 9, 9, 9, 9, 9],
+                shading=["gouraud"] * 7,
+                style=["surface"] * 7,
+                wire_color=[
+                    "136:136:136",
+                    "27:118:230",
+                    "136:136:136",
+                    "136:136:136",
+                    "136:136:136",
+                    "136:136:136",
+                    "0:0:0",
+                ],
+                color_map=",".join([
+                    f"max_depth@{MAPSET_NAME}",
+                    *[f"inundation_strds_{i}.0@{MAPSET_NAME}" for i in range(1, 6)],
+                ]),
+                color="7:97:139",
+                # vline=[f"basin@{MAPSET_NAME}"] * 4,
+                # vline_width=[2, 2, 2, 2],
+                # vline_color=["77:77:77:255"] * 4,
+                # vline_height=[0, 0, 0, 0],
+                # vline_mode=["surface"] * 4,
+                # vline_position=[0] * 12,
+                # vpoint=[f"basin@{MAPSET_NAME}"] * 4,
+                # vpoint_width=[2, 2, 2, 2],
+                # vpoint_color=["77:77:77:255"] * 4,
+                # vpoint_size=[5, 5, 5, 5],
+                # vpoint_marker=["sphere", "sphere", "sphere", "sphere"],
+                # vpoint_position=[0] * 12,
+                # vpoint_layer=[1] * 8,
+                position=(0.84, 0.16),
+                height=510,
+                perspective=13,
                 twist=0,
                 zexag=1.0,
-                focus="815,334,0",
+                focus=(507, 476, 0),
                 bgcolor="255:255:255",
-                light_position="0.68,-0.68,0.80",
+                light_position=(0.68, -0.68, 0.80),
                 light_brightness=80,
                 light_ambient=20,
                 light_color="255:255:255",
-                size="843,739",
+                fringe=["nw", "se"],
+                fringe_color="139:105:20",
+                fringe_elevation=43,
+                # size=(949, 739),
             )
+
+
+            # Full list of options m.nviz.image
+            # https://grass.osgeo.org/grass84/manuals/m.nviz.image.html
+            # m.render(
+            #     elevation_map=LIDAR_DTM_1M,
+            #     color_map=f"{LIDAR_DTM_1M}_slope",
+            #     resolution_fine=1,
+            #     volume="inundation_3d",
+            #     arrow_position=[100, 50],
+            #     volume_shading="gouraud",
+            #     volume_resolution=1,
+            #     volume_position="0,0,100",
+            #     isosurf_level="1:100.0,1:150.0,1:200.0,1:250.0,1:300.0,1:350.0",
+            #     # isosurf_level="1:5.0,1:4.0,1:3.0,1:2.0,1:1.0,1:0.0",
+            #     isosurf_color_map="inundation_3d",
+            #     isosurf_color_value="100:100:100",
+            #     # isosurf_transp_value="0,0,0,0,0,0",
+            #     # position="0.84,0.16",
+            #     height=3000,
+            #     perspective=21,
+            #     twist=0,
+            #     zexag=1.0,
+            #     focus="815,334,0",
+            #     bgcolor="255:255:255",
+            #     light_position="0.68,-0.68,0.80",
+            #     light_brightness=80,
+            #     light_ambient=20,
+            #     light_color="255:255:255",
+            #     size="843,739",
+            # )
             # m.overlay.d_legend(
             #     raster="inundation_3d", at=(60, 97, 87, 92)
             # )
@@ -1140,7 +1216,7 @@ def main():
             # solar_radiation()
 
             # Volumetric analysis
-            # volumetric_analysis()
+            volumetric_analysis()
 
         with gs.RegionManager(
             raster="inundation_strds_5.0",
@@ -1169,24 +1245,6 @@ def main():
                 output_name=f"{LIDAR_DTM_1M}_aspect",
                 legend_units="Aspect [\u00b0]",
             )
-
-            # curvature_color_scheme = """
-            # 0% black
-            # -0.1 12,44,132
-            # -0.05 34,94,168
-            # -0.03 29,145,192
-            # -0.02 65,182,196
-            # -0.015 127,205,187
-            # -0.01 199,233,180
-            # 0 white
-            # 0.01 255,255,178
-            # 0.015 254,217,118
-            # 0.02 254,178,76
-            # 0.03 253,141,60
-            # 0.05 252,78,42
-            # 0.1 227,26,28
-            # 100% 177,0,38
-            # """
 
             curvature_color_scheme = """
             0% 34,94,168
@@ -1229,6 +1287,13 @@ def main():
                 legend_units="Water Depth [m]",
             )
             aoi_3d_figure(
+                mapcolor="depth.30",
+                elevation="depth.30",
+                output_name="max_depth",
+                legend_flags="bsld",
+                legend_units="Water Depth [m]",
+            )
+            aoi_3d_figure(
                 mapcolor="erosion_deposition",
                 elevation=LIDAR_DTM_1M,
                 output_name="erosion_deposition",
@@ -1247,14 +1312,19 @@ def main():
                 output_name="global_rad_365",
                 legend_units="Global solar radiation [Wh/m\u00b2]",
             )
-            aoi_3d_figure(mapcolor="twi", elevation=LIDAR_DTM_1M, output_name="twi", legend_units="TWI",)
+            aoi_3d_figure(
+                mapcolor="twi",
+                elevation=LIDAR_DTM_1M,
+                output_name="twi",
+                legend_units="TWI"
+            )
 
-            # aoi_3d_figure(
-            #     mapcolor="global_rad_356",
-            #     elevation=LIDAR_DTM_1M,
-            #     output_name="global_rad_365",
-            #     legend_units="Global solar radiation [Wh/m\u00b2]",
-            # )
+            aoi_3d_figure(
+                mapcolor="tpi",
+                elevation=LIDAR_DTM_1M,
+                output_name="tpi_aoi_3d",
+                legend_units="TPI",
+            )
 
             aoi_3d_figure(
                 mapcolor="d8_mfd_flowaccum",
@@ -1270,6 +1340,7 @@ def main():
                 elevation=LIDAR_DTM_1M,
                 legend_range_min=1,
                 legend_units="Flow Accumulation [D8 SFD]",
+                legend_at="12,17,8,47",
                 legend_flags="blt",
                 output_name="d8_sfd_flowaccum_aoi_3d",
             )
@@ -1279,6 +1350,7 @@ def main():
                 elevation=LIDAR_DTM_1M,
                 legend_units="Flow Accumulation [D-infinity SFD]",
                 legend_range_min=1,
+                legend_at="12,17,8,47",
                 legend_flags="btl",
                 output_name="dinf_sfd_flowaccum_aoi_3d",
             )
@@ -1294,7 +1366,7 @@ def main():
             aoi_3d_figure(
                 mapcolor="hand",
                 elevation=LIDAR_DTM_1M,
-                legend_units="Hieght above nearest drainage (HAND) [m]",
+                legend_units="Hieght above nearest drainage [m]",
                 legend_flags="bdt",
                 output_name="hand_aoi_3d",
             )
