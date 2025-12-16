@@ -93,6 +93,19 @@ def save_jpeg(image: Image.Image, output_path: Path) -> None:
         print(f"An error occurred: {e}")
 
 
+def create_color_scheme(rules: list[tuple]) -> StringIO:
+    """
+    Create a color scheme for r_colors or v_colors from a list of rules.
+
+    :param rules: List of tuples containing position and color
+    :type rules: list[tuple]
+    :return: Color scheme as StringIO
+    :rtype: StringIO
+    """
+    scheme = "\n".join(f"{pos} {color}" for pos, color in rules) + "\n"
+    return StringIO(scheme)
+
+
 def main():
     v = sys.version_info
     print(f"We are using Python {v.major}.{v.minor}.{v.micro}")
@@ -215,7 +228,13 @@ def main():
         legend_range = f"{_range_min},{_range_max}"
         print(f"Saving AOI map figure to {figure_output}")
 
-        with gs.RegionManager(region=AOI_REGION, s="s-200", raster=LIDAR_DTM_1M, res=AOI_RESOLUTION, flags="a"):
+        with gs.RegionManager(
+            region=AOI_REGION,
+            s="s-200",
+            raster=LIDAR_DTM_1M,
+            res=AOI_RESOLUTION,
+            flags="a"
+        ):
             m = gj.Map(width=800, use_region=True)
             m.d_rast(map="ocean")
 
@@ -240,6 +259,7 @@ def main():
                 size="00:00:10",
                 color="#FDFDFD",
                 text_color="#FDFDFD",
+                border_color="#FFFFFF",
                 fontsize=16,
                 flags="gac",
             )
@@ -518,6 +538,21 @@ def main():
             flags="n"
         )
 
+    def generate_contours(tools: Tools) -> None:
+        # Generate contour lines for the DTM
+        tools.r_contour(
+            input=LIDAR_DTM_1M,
+            output=f"{LIDAR_DTM_1M}_contours",
+            step=5
+        )
+        tools.v_colors(
+            map=f"{LIDAR_DTM_1M}_contours",
+            use="attr",
+            column="level",
+            color="grey"
+        )
+        brown_contour_color_scheme(tools, f"{LIDAR_DTM_1M}_contours")
+
     def resample_dem(
             tools: Tools,
             input: str,
@@ -596,8 +631,7 @@ def main():
             flags="or"
         )
 
-    def optimize_rst_params(tools: Tools, points) -> None:
-
+    def create_lidar_dem_rst(tools: Tools, points: str, optimization: dict) -> None:
         # Interpolate LiDAR ground points to create DTM using RST
         # Only within the AOI region at 1m resolution
         with gs.RegionManager(
@@ -605,126 +639,16 @@ def main():
             res=AOI_RESOLUTION,
             flags="a"
         ):
-            """Optimize RST parameters using cross-validation."""
-            print("Finding optimal RST parameters using cross-validation...")
-            results = tools.v_surf_rst_cv(
-                point_cloud=points,
-                tension=[10, 40, 150, 500],
-                smooth=[0.2, 0.5, 1.0, 2.0],
-                cv_prefix="cv",
-                format="json",
-                nprocs=6,
-                output_file=Path(PROJECT_DIR, "config/cv_results.json"),
-            ).json
 
-            # Sort RMSE by lowest value (Best first)
-            sorted_results = results.sort(key=lambda item: item["rmse"])
-            fig, ax = plt.subplots(figsize=(10, 6))
-            # Extract numeric values robustly
-            tensions = []
-            smooths = []
-            rmses = []
-            for item in results:
-                try:
-                    tval = float(item.get("tension"))
-                    sval = float(item.get("smooth"))
-                    rval = item.get("rmse")
-                    rval = float(rval) if rval not in (None, "") else np.nan
-                except Exception:
-                    continue
-                tensions.append(tval)
-                smooths.append(sval)
-                rmses.append(rval)
-
-            tensions = np.array(tensions)
-            smooths = np.array(smooths)
-            rmses = np.array(rmses, dtype=float)
-
-            # Scatter: tension (x), smoothing (y), RMSE encoded by color
-            sc = ax.scatter(
-                tensions,
-                smooths,
-                c=rmses,
-                cmap="plasma",
-                s=80,
-                edgecolor="k",
-                linewidth=0.5,
-                alpha=0.95,
+            tools.r_in_pdal(
+                input=LIDAR_PATH,
+                output="lidar_dtm_n_1m",
+                method="n",
+                resolution=1,
+                class_filter="2",
+                flags="we",
+                quiet=True
             )
-
-            cbar = fig.colorbar(sc, ax=ax)
-            cbar.set_label("RMSE")
-
-            ax.set_xlabel("Tension")
-            ax.set_ylabel("Smoothing")
-            ax.set_title("RST cross-validation: tension vs smoothing (RMSE color)")
-
-            # Log-scale x-axis (tension spans orders of magnitude)
-            try:
-                ax.set_xscale("log")
-            except Exception:
-                pass
-
-            # Highlight best (lowest RMSE) if available
-            if rmses.size > 0 and not np.all(np.isnan(rmses)):
-                best_idx = int(np.nanargmin(rmses))
-                bx, by, br = tensions[best_idx], smooths[best_idx], rmses[best_idx]
-                ax.scatter([bx], [by], s=220, facecolors="none", edgecolors="red", linewidths=2)
-                ax.annotate(
-                    f"best\nRMSE={br:.3f}",
-                    xy=(bx, by),
-                    xytext=(10, 10),
-                    textcoords="offset points",
-                    bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8),
-                )
-
-            ax.grid(True, linestyle="--", alpha=0.4)
-            plt.tight_layout()
-
-            out_path = Path(SAVE_DIR, "rst_cv_results.png")
-            fig.savefig(out_path, dpi=150)
-            print(f"Saved RST CV plot to {out_path}")
-            optimized_params = min(results, key=lambda x: x["rmse"])
-            print(f"""
-                Optimal RST parameters:
-                  Tension = {optimized_params['tension']}
-                  Smoothing = {optimized_params['smooth']}
-                  RMSE = {optimized_params['rmse']}
-            """)
-            cv_list = tools.g_list(type="raster", pattern="cv_*", format="json").json
-
-            for cv_map in cv_list:
-                aoi_map_figure(
-                    tools=tools,
-                    map_name=cv_map["name"],
-                    relief=LIDAR_DTM_1M_RELIEF
-                )
-        return optimized_params
-
-    def create_lidar_dem_rst(tools: Tools, points: str, optimization: dict) -> None:
-        # Interpolate LiDAR ground points to create DTM using RST
-        # Only within the AOI region at 1m resolution
-        with gs.RegionManager(region=AOI_REGION, res=AOI_RESOLUTION, flags="a"):
-
-            # tools.r_in_pdal(
-            #     input=LIDAR_PATH,
-            #     output="lidar_dtm_mean_1m",
-            #     method="mean",
-            #     resolution=1,
-            #     class_filter="2",
-            #     flags="we",
-            #     quiet=True
-            # )
-
-            # tools.r_in_pdal(
-            #     input=LIDAR_PATH,
-            #     output="lidar_dtm_n_1m",
-            #     method="n",
-            #     resolution=1,
-            #     class_filter="2",
-            #     flags="we",
-            #     quiet=True
-            # )
 
             # tools.r_in_pdal(
             #     input=LIDAR_PATH,
@@ -756,7 +680,6 @@ def main():
                 nprocs=30,
                 npmin=npmin,
                 dmin=dmin,
-                # mask=LIDAR_DTM_10M,
                 flags=flags,
                 quiet=True,
             )
@@ -800,17 +723,6 @@ def main():
         # """
 
         # Colorblind-safe aspect color scheme
-        cb_safe_aspect_color_scheme = """
-        0      54:75:154      # deep blue (North)
-        45     70:120:194     # blue–cyan
-        90     88:166:214     # cyan (East)
-        135    120:197:191    # teal
-        180    190:215:141    # yellowish (South)
-        225    232:196:107    # warm yellow–orange
-        270    227:158:167    # pink (West)
-        315    170:120:195    # purple
-        360    54:75:154      # deep blue (wraps to 0°)
-        """
         cb_safe_aspect_colors = [
             (0, "#364B9A"),
             (45, "#4678C2"),
@@ -941,6 +853,8 @@ def main():
             flowaccumulation="dinf_sfd_flowaccum",
             quiet=True
         )
+        # Bug in r.flow converts NULLs to zeros, so set ocean to NULL again
+        set_ocean_to_null("dinf_sfd_flowaccum")
 
         # MEFA method
         print("MEFA method...")
@@ -959,7 +873,7 @@ def main():
             legend_units="",
             legend_range_min=1,
             legend_flags="lt",
-            legend_title="Flow Accumulation [D8 SFD]",
+            legend_title="Flow Accumulation [D8 MFD]",
         )
 
         aoi_map_figure(
@@ -977,9 +891,10 @@ def main():
             map_name="dinf_sfd_flowaccum",
             relief=LIDAR_DTM_1M_RELIEF,
             legend_units="",
+            shade_flags="n",
             legend_title="Flow Accumulation [D-infinity SFD]",
             legend_range_min=1,
-            legend_flags="btl",
+            legend_flags="tl",
         )
 
         tools.r_colors(
@@ -996,7 +911,7 @@ def main():
             legend_flags="lt",
             legend_title="Flow Accumulation [MEFA]",
             legend_range_min=1,
-            legend_range_max="30000"
+            legend_range_max="70000"
         )
 
     def twi_calculation(tools: Tools, flow_accumulation, slope: str) -> None:
@@ -1056,15 +971,15 @@ def main():
             accumulation=flow_accumulation,
             direction="stream_extract_dir",
             stream_rast="stream_extract",
-            stream_vect="stream_order",
+            stream_vect="stream_orders",
             strahler="strahler",
-            horton="horton",
+            horton="horton"
         )
 
         # Set color tables for stream order maps
         for order_map in ["strahler", "horton"]:
             tools.v_colors(
-                map="stream_order", use="attr", column=order_map, color="water"
+                map="stream_orders", use="attr", column=order_map, color="water"
             )
             tools.r_colors(
                 map=order_map, color="water", flags=""
@@ -1341,6 +1256,15 @@ def main():
             nprocs=6,  # use all available processors
             flags="t",
         )
+        tools.r_mapcalc(
+            expression="max_depth = if(depth.30 >= 0.01, depth.30, null())",
+            quiet=True
+        )
+        tools.r_colors(
+            map="max_depth",
+            raster="depth.30",
+            flags="g"
+        )
 
     def erosion(elevation: str) -> None:
         print("Calcuating erosion and deposition...")
@@ -1616,9 +1540,33 @@ def main():
         9500   #a81c14
         10000  #7a0b0b
         """
+
+        solar_radiation_colors = [
+            ("0", "#0b0b0b"),
+            ("500", "#0d1f3a"),
+            ("1000", "#1e4271"),
+            ("1500", "#3a78ab"),
+            ("2000", "#5aa5c9"),
+            ("2500", "#86c8dd"),
+            ("3000", "#b5e3f3"),
+            ("4000", "#f3f9d0"),
+            ("5000", "#fff3a0"),
+            ("6000", "#fed675"),
+            ("7000", "#fdb157"),
+            ("8000", "#f9833a"),
+            ("8500", "#e7552e"),
+            ("9000", "#cc301d"),
+            ("9500", "#a81c14"),
+            ("10000", "#7a0b0b")
+        ]
+
+        color_scheme = create_color_scheme(
+            rules=solar_radiation_colors
+        )
+
         tools.r_colors(
             map=[global_rad_356, global_rad_172],
-            rules=StringIO(color_scheme),
+            rules=color_scheme,
             flags="e"
         )
 
@@ -1639,6 +1587,25 @@ def main():
             legend_title="Global Solar Radiation [Wh/m\u00b2]",
             legend_flags="t",
         )
+
+    def tpi():
+        """Calculate Topographic Position Index (TPI)."""
+        print("Calculating Topographic Position Index (TPI)...")
+        tools.r_tpi(
+            input=LIDAR_DTM_1M,
+            output="tpi"
+        )
+
+        tpi_colors = [
+            ("0%", "#0A4C6B"),
+            ("25%", "#DCF5FF"),
+            ("50%", "#FFF7DC"),
+            ("75%", "#FFE6DC"),
+            ("100%", "#6B4E4C")
+        ]
+
+        tpi_color_scheme = create_color_scheme(rules=tpi_colors)
+        tools.r_colors(map="tpi", rules=tpi_color_scheme, flags="e")
 
     def landforms(tools, dem):
 
@@ -1671,10 +1638,10 @@ def main():
         tools = Tools(session=session, overwrite=True)
 
         # Install required GRASS add-ons
-        # install_grass_addons()
+        install_grass_addons()
 
         # Import DSM and DTM at 1m resolution
-        # import_dem_data(res=10, tools=tools)
+        import_dem_data(res=10, tools=tools)
 
         # Set region and run analysis tools
         tools.g_region(raster=DTM_NAME, flags="a")
@@ -1684,11 +1651,7 @@ def main():
         set_ocean_to_null(elevation_map=DSM_NAME)
         set_ocean_to_null(elevation_map=LIDAR_DTM_10M)
 
-        # Set color tables and compute slope/aspect
-        # tools.r_colors(
-        #     map=[DTM_NAME, DSM_NAME, LIDAR_DTM_10M],
-        #     color="elevation"
-        # )
+        # Set color tables
         pounui_island_color_scheme(tools, [DTM_NAME, DSM_NAME, LIDAR_DTM_10M])
 
         # Resample to 100m, 200m and 300m resolutions
@@ -1696,18 +1659,18 @@ def main():
         resample_dem(tools=tools, input=DTM_NAME, resolutions=[100, 200, 300])
 
         print("Computing relief...")
-        # tools.r_relief(input=DTM_NAME, output=DTM_RELIEF, quiet=True)
+        tools.r_relief(input=DTM_NAME, output=DTM_RELIEF, quiet=True)
 
         # Create 1km grid for reference
-        # tools.v_mkgrid(map="grid_1k_1k", box="1000,1000")
-        # tools.v_extract(input="grid_1k_1k", cats=27, output=AOI_REGION)
+        tools.v_mkgrid(map="grid_1k_1k", box="1000,1000")
+        tools.v_extract(input="grid_1k_1k", cats=27, output=AOI_REGION)
 
-        # print("Computing skyview factor...")
-        # tools.r_skyview(input=DTM_NAME, output="lidar_dtm_skyview", ndir=8)
+        print("Computing skyview factor...")
+        tools.r_skyview(input=DTM_NAME, output="lidar_dtm_skyview", ndir=8)
         full_region_map_figure(
             tools=tools,
             map_name=DTM_NAME,
-            relief="lidar_dtm_skyview",
+            relief=DTM_RELIEF,
             legend_units="m",
             legend_flags="bt"
         )
@@ -1747,35 +1710,27 @@ def main():
         ):
 
             # Import LiDAR data and create a 1m DTM
-            # process_lidar_data(tools=tools)
+            process_lidar_data(tools=tools)
             # opt_rst = optimize_rst_params(tools=tools, points="lidar_be")
             # opt_rst = {"tension": 500, "smooth": 0.2, "npmin": 300, 'flags': "t"} # Look ok
             # opt_rst = {"tension": 800, "smooth": 10, "npmin": 400, 'flags': "t"}  # Currently used
-            opt_rst = {"tension": 800, "smooth": 2, "npmin": 200, "dmin": 2, "flags": "t"}  # Currently used
-            # create_lidar_dem_rst(
-            #     tools=tools,
-            #     points="lidar_be",
-            #     optimization=opt_rst
-            # )
+            opt_rst = {
+                "tension": 700,
+                "smooth": 2,
+                "npmin": 300,
+                "dmin": 1,
+                "flags": "t"
+            }
+            create_lidar_dem_rst(
+                tools=tools,
+                points="lidar_be",
+                optimization=opt_rst
+            )
+
+            # prepare cartographic features.
             set_ocean_to_null(elevation_map=LIDAR_DTM_1M)
-
-            # Generate contour lines for the DTM
-            tools.r_contour(
-                input=LIDAR_DTM_1M,
-                output=f"{LIDAR_DTM_1M}_contours",
-                step=5
-            )
-            tools.v_colors(
-                map=f"{LIDAR_DTM_1M}_contours", use="attr", column="level", color="grey"
-            )
-            brown_contour_color_scheme(tools, f"{LIDAR_DTM_1M}_contours")
+            generate_contours(tools=tools)
             create_ocean_background()
-
-            tools.r_relief(
-                input=LIDAR_DTM_1M,
-                output=LIDAR_DTM_1M_RELIEF,
-                quiet=True
-            )
 
             print("Computing skyview factor...")
             tools.r_skyview(
@@ -1802,23 +1757,8 @@ def main():
                 mcurv=f"{LIDAR_DTM_1M}_rst_mcurv",
                 relief=LIDAR_DTM_1M_RELIEF,
             )
-            pounui_island_color_scheme(tools, "lidar_dtm_mean_1m")
-            aoi_map_figure(
-                tools=tools,
-                map_name="lidar_dtm_mean_1m",
-                relief=LIDAR_DTM_1M_RELIEF,
-                legend_units="m",
-                legend_flags="st"
-            )
-            pounui_island_color_scheme(tools, "lidar_dsm_max_1m")
-            aoi_map_figure(
-                tools=tools,
-                map_name="lidar_dsm_max_1m",
-                relief=LIDAR_DTM_1M_RELIEF,
-                legend_units="m",
-                legend_flags="st",
-            )
 
+            # Color bare earth points per cell
             tools.r_colors(
                 map="lidar_dtm_n_1m",
                 color="viridis",
@@ -1837,62 +1777,14 @@ def main():
                 tools=tools, input=LIDAR_DTM_1M
             )
 
-            # second_order_derivative_aoi_figures(
-            #     tools=tools,
-            #     slope=slope,
-            #     aspect=aspect,
-            #     pcurv=pcurv,
-            #     tcurv=tcurv,
-            #     relief=LIDAR_DTM_1M_RELIEF,
-            # )
-
-            # # Smoothing Functions
-            # # 3x3 Median smoothing
-            # tools.r_neighbors(
-            #     input=LIDAR_DTM_1M,
-            #     output=f"{LIDAR_DTM_1M}_s_med_3x3",
-            #     size=3,
-            #     method="median"
-            # )
-
-            # slope, aspect, pcurv, tcurv = compute_second_order_derivatives(
-            #     tools=tools, input=f"{LIDAR_DTM_1M}_s_med_3x3"
-            # )
-
-            # second_order_derivative_aoi_figures(
-            #     tools=tools,
-            #     slope=slope,
-            #     aspect=aspect,
-            #     pcurv=pcurv,
-            #     tcurv=tcurv,
-            #     relief=LIDAR_DTM_1M_RELIEF,
-            # )
-
-            # # Quadratic edge-preserving smoothing
-            # lidar_dtm_smooth_qa = f"{LIDAR_DTM_1M}_s_qa"
-            # smooth_options = {
-            #     "function": "quadratic",
-            #     "input": LIDAR_DTM_1M,
-            #     "output": lidar_dtm_smooth_qa,
-            #     "lambda": 0.4,
-            #     "steps": 20,
-            # }
-            # tools.r_smooth_edgepreserve(
-            #     **smooth_options
-            # )
-
-            # slope, aspect, pcurv, tcurv = compute_second_order_derivatives(
-            #     tools=tools, input=lidar_dtm_smooth_qa
-            # )
-
-            # second_order_derivative_aoi_figures(
-            #     tools=tools,
-            #     slope=slope,
-            #     aspect=aspect,
-            #     pcurv=pcurv,
-            #     tcurv=tcurv,
-            #     relief=LIDAR_DTM_1M_RELIEF,
-            # )
+            second_order_derivative_aoi_figures(
+                tools=tools,
+                slope=slope,
+                aspect=aspect,
+                pcurv=pcurv,
+                tcurv=tcurv,
+                relief=LIDAR_DTM_1M_RELIEF,
+            )
 
             # Aggressive Tukey's smoothing
             lidar_dtm_smooth_agg_tukey = f"{LIDAR_DTM_1M}_s_agg_tukey"
@@ -1933,6 +1825,7 @@ def main():
                 threshold=100000,
             )
 
+            # Convert basins to vectors and extract basin 2
             tools.r_to_vect(
                 input="d8_mfd_basins2",
                 output="d8_mfd_basins2",
@@ -1993,7 +1886,7 @@ def main():
                 extra_vectors=[
                     *extra_vectors,
                     {
-                        "map": "stream_order",
+                        "map": "stream_orders",
                         "type": "line",
                         "width_column": "horton",
                         "width_scale": 2
@@ -2022,7 +1915,7 @@ def main():
                 extra_vectors=[
                     *extra_vectors,
                     {
-                        "map": "stream_order",
+                        "map": "stream_orders",
                         "type": "line",
                         "width_column": "strahler",
                         "width_scale": 2
@@ -2066,20 +1959,7 @@ def main():
                 extra_shades=extra_shades
             )
 
-            # TPI calculation
-            print("Calculating Topographic Position Index (TPI)...")
-            tools.r_tpi(
-                input=LIDAR_DTM_1M,
-                output="tpi"
-            )
-            tpi_color_scheme = """
-            0%     10:76:107
-            25%    220:245:255
-            50%    255:247:220
-            75%    255:230,220
-            100%   107:78:76
-            """
-            tools.r_colors(map="tpi", rules=StringIO(tpi_color_scheme), flags="e")
+            # TPI figure
             aoi_map_figure(
                 tools=tools,
                 map_name="tpi",
@@ -2088,30 +1968,19 @@ def main():
                 legend_flags="t",
             )
 
-            # Mask to basins for overland flow and erosion/deposition
-            # with gs.RegionManager(
-            #     region=AOI_REGION,
-            #     raster=LIDAR_DTM_1M,
-            #     # vector="basin",
-            #     res=1,
-            #     flags="a",
-            # ):
-            #     with gs.MaskManager():
-            #         tools.r_mask(vector="d8_mfd_basins2")
+            # Overland flow and erosion/deposition
+            print("Simulating overland flow and erosion/deposition...")
+            with gs.MaskManager():
+                tools.r_mask(vector="d8_mfd_basins2")
 
-            #         # Overland flow simulation
-            #         overland_flow(elevation=LIDAR_DTM_1M)
-            #         tools.r_mapcalc(expression="max_depth = if(depth.30 >= 0.01, depth.30, null())", quiet=True)
-            #         tools.r_colors(
-            #             map="max_depth",
-            #             raster="depth.30",
-            #             flags="g"
-            #         )
-            #         # Erosion and deposition
-            #         erosion(elevation=f"{LIDAR_DTM_1M}")
+                # Overland flow simulation
+                overland_flow(elevation=LIDAR_DTM_1M)
+
+                # Erosion and deposition
+                erosion(elevation=LIDAR_DTM_1M)
 
             # Solar radiation
-            # solar_radiation()
+            solar_radiation()
             landforms(tools=tools, dem=LIDAR_DTM_1M)
             volumetric_analysis()
 
@@ -2246,8 +2115,6 @@ def main():
                 legend_flags="t",
                 legend_title="Landforms",
                 shade_flags="n",
-                # legend_at="5,10,5,95",
-                # extra_vectors=extra_vectors,
                 extra_shades=extra_shades,
             )
 
@@ -2258,8 +2125,6 @@ def main():
                 legend_flags="t",
                 legend_title="Morphology",
                 shade_flags="n",
-                # legend_at="5,10,5,95",
-                # extra_vectors=extra_vectors,
                 extra_shades=extra_shades,
             )
 
@@ -2291,24 +2156,29 @@ def main():
                 legend_units="Aspect [\u00b0]",
             )
 
-            curvature_color_scheme = """
-            -1.10 #225EA8
-            -0.7 #1D91C0
-            -0.3 #41B6C4
-            -0.1 #7FCDAB
-            -0.01 #C7E9B4
-            0.0 #FFFFFF
-            0.01 #FFFFB2
-            0.1 #FEDA76
-            0.3 #FEB24C
-            0.7 #FD8D3C
-            1.0 #FC4E2A
-            1.35 #83006D
-            """
+            curvature_colors = [
+                ("-1.35", "#08306B"),
+                ("-1.0", "#225EA8"),
+                ("-0.7", "#1D91C0"),
+                ("-0.3", "#41B6C4"),
+                ("-0.1", "#7FCDAB"),
+                ("-0.01", "#C7E9B4"),
+                ("0.0", "#FFFFFF"),
+                ("0.01", "#FFFFB2"),
+                ("0.1", "#FEDA76"),
+                ("0.3", "#FEB24C"),
+                ("0.7", "#FD8D3C"),
+                ("1.0", "#FC4E2A"),
+                ("1.35", "#83006D"),
+            ]
+
+            curvature_color_scheme = create_color_scheme(
+                rules=curvature_colors
+            )
 
             tools.r_colors(
                 map=f"{LIDAR_DTM_1M}_pcurv",
-                rules=StringIO(curvature_color_scheme),
+                rules=curvature_color_scheme,
                 scale="",
                 flags="e"
             )
