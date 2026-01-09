@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.7"
+julia_version = "1.11.8"
 manifest_format = "2.0"
 project_hash = "39f01bf40bbc0b263789667cd6485f4a3947713c"
 
@@ -1399,10 +1399,10 @@ uuid = "c1c5ebd0-6772-5130-a774-d5fcae4a789d"
 version = "3.100.3+0"
 
 [[deps.LASzip_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "6a5de2baf47bf8ada29ad6f566d8ce1a50dc5cfe"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "be79377cdff896d9e19f5c23795b05b056e8d7cd"
 uuid = "8372b9c3-1e34-5cc3-bfab-1a98e101de11"
-version = "3.4.3000+0"
+version = "3.4.4001+0"
 
 [[deps.LERC_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1443,8 +1443,10 @@ uuid = "570499db-eae3-5eb6-bdd5-a5326f375e68"
 version = "0.3.7"
 
 [[deps.LazIO]]
-deps = ["CoordinateTransformations", "Dates", "Extents", "FileIO", "FixedPointNumbers", "GeoInterface", "LASzip_jll", "LasIO", "Libdl", "LinearAlgebra", "StaticArrays", "Tables", "Test", "UUIDs"]
-git-tree-sha1 = "fb17a695cc918b9a6dd4ff5411efab83efc78483"
+deps = ["CoordinateTransformations", "Dates", "Extents", "FileIO", "FixedPointNumbers", "GeoInterface", "LASzip_jll", "LasIO", "Libdl", "LinearAlgebra", "Setfield", "StaticArrays", "Tables", "Test", "UUIDs"]
+git-tree-sha1 = "7723d2759cfba5dbb0200f7d6f09592504f96dcf"
+repo-rev = "feat/compat"
+repo-url = "https://github.com/evetion/LazIO.jl"
 uuid = "c3605908-9f0f-11e8-0a72-0d361c15a277"
 version = "0.4.5"
 weakdeps = ["Makie", "RecipesBase"]

@@ -1,0 +1,7 @@
+name: xdem-geomorpho
+channels:
+  - conda-forge
+dependencies:
+  - xdem<0.2
+  - python-pdal
+
