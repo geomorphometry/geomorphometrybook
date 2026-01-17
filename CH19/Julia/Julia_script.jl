@@ -98,7 +98,7 @@ using GeoStats
 
 ## Here we compare a DTM created using our PMF procedure to a DTM created using only points classified as "ground" in the original data. We interpolate any gaps using inverse distance weighting with an exponent of 2 and compare the differences.
 
-ground(p) = classification(p) == LazIO.classes.ground # Function to determine if a point is classifiedd as "ground"
+ground(p) = classification(p) == LazIO.classes.ground # Function to determine if a point is classified as "ground"
 ground_pci = filter(pci, ground)
 cdtm = reduce(ground_pci, reducer=median)
 GeoArrays.fill!(cdtm, IDW(2), maxneighbors=10, neighborhood=MetricBall(10))
