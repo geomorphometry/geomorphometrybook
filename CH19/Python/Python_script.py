@@ -51,7 +51,7 @@ cropped_dem = dem.crop((dem.bounds.left + 1500, dem.bounds.bottom,
 import pdal
 input_filename = "../Data/ponui.laz"
 output_filename = "../Data/ponui.tif"
-json_string =  f"""
+json_string = f"""
     [
         "{input_filename}",
         {{
@@ -83,7 +83,7 @@ dem = dem.reproject(crs=dem.get_metric_crs())
 
 # We compute and visualize the difference in slope between the two methods.
 
-slope_h = dem.slope()  # Default is "Horn"
+slope_h = dem.slope() # Default is "Horn"
 slope_zt = dem.slope(method="ZevenbergThorne")
 diff = slope_h - slope_zt
 

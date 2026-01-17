@@ -66,7 +66,7 @@ ex = Extent(X=(1.794519e6, 1.79552e6), Y=(5.91424475e6, 5.91524575e6))
 using Statistics
 cga = counts(pci)
 ## Check the average density of the filled (containing at least 1 point) cells
-@info filter(>=(1), cga) |> mean |> round  # 6.0
+filter(>=(1), cga) |> mean |> round  # 6.0
 plotcb(cga, colormap=:thermal, colorrange=(0, 10))
 
 first_return(p) = return_number(p) == 1  # this defines a new function

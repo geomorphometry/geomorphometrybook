@@ -37,8 +37,8 @@ ponui_border <- read_sf("../Data/ponui_buffer10m.gpkg") # Read in island border 
 ponui_dtm <- rast("../Data/ponui_island_dtm.tif") # Read in raster DTM
 
 # These objects can be plotted using the plot() function
-plot(ponui_dtm, main = "Ponui Island DTM", axes = FALSE)
-plot(st_geometry(ponui_border), border = "white", add = TRUE)
+plot(ponui_dtm, main = "Ponui Island DTM", axes = FALSE, reset = FALSE) # Use reset = FALSE if adding additional layers
+plot(st_geometry(ponui_border), border = "white", add = TRUE) # add = TRUE layers on top of current plot
 
 # ==== Gridding LiDAR Point Clouds ====
 # Purpose: Create a 1 m gridded DTM and explore point cloud metrics
@@ -51,7 +51,7 @@ library(lidR) # For handling LiDAR data
 # and the classification (c), and `filter = "-keep_class 2"` indicates to only
 # read in points that are of classification type 2 which corresponds to ground points.
 ponui_las <- readLAS(
-  "..Data/ponui.las",
+  "../Data/ponui.las",
   select = "xyzc",
   filter = "-keep_class 2"
 ) # Read in LiDAR data
