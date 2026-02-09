@@ -40,6 +40,8 @@ By default, the scripts are set up to download the DSM and DTM directly from Zen
     Or install them using the `requirements.txt` file:
 
     ```bash
+    python3 -m venv venv
+    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
     pip install -r requirements.txt
     ```
 
@@ -59,4 +61,33 @@ By default, the scripts are set up to download the DSM and DTM directly from Zen
 
     ```bash
     jupyter notebook geomorphometry_in_grass_notebook.ipynb
+    ```
+
+#### Shell
+
+The `geomorphometry_in_grass.sh` script is a simplified version of the Python script that focuses on the core GRASS commands without generating figures or maps. To run the shell script, follow these steps:
+
+1. Ensure you have GRASS installed and available as `grass` in your command line.
+
+2. Install the required GRASS add-ons listed in `gextensions.txt` using the `g.extension` command in GRASS. You can do this by running the following commands in the GRASS command line:
+
+    ```bash
+    g.extension extension=r.flowaccumulation
+    g.extension extension=r.stream.order
+    g.extension extension=r.stream.distance
+    g.extension extension=r.hand
+    g.extension extension=r.tpi
+    g.extension extension=r.skyview
+    ```
+
+3. Make the shell script executable:
+
+    ```bash
+    chmod +x geomorphometry_in_grass.sh
+    ```
+
+4. Run the shell script:
+
+    ```bash
+    ./geomorphometry_in_grass.sh
     ```
