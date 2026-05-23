@@ -14,7 +14,7 @@
 #            there for Ponui Island. This script has been worked out with
 #            GRASS 8.5.
 #
-# COPYRIGHT: (C) 2025 by Corey T. White, Helena Mitasova, Markus Neteler,
+# COPYRIGHT: (C) 2025-2026 by Corey T. White, Helena Mitasova, Markus Neteler,
 #            Anna Petrasova, Jaroslav Hofierka and the GRASS Development Team
 #
 #            This program is free software under the GNU General Public
@@ -1530,7 +1530,7 @@ def tpi(tools: Any, dem: str) -> None:
     """Calculate Topographic Position Index (TPI) and apply a color table."""
     print("Calculating Topographic Position Index (TPI)...")
     tools.r_tpi(input=dem, output="tpi")
-    GeoColors.colors(map="tpi", name="tpi", tools=tools, flags="e")
+    GeoColors.colors(maps=["tpi"], scheme_name="tpi", tools=tools, flags="e")
 
     aoi_map_figure(
         tools=tools,
