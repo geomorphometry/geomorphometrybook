@@ -9,8 +9,8 @@ written to disk. The *1_HAND.py* script is an example to calculate the Height Ab
 
 ## Prerequisites
 To run the code you need to install:
-* QGIS Desktop
-* PCRaster
+* [QGIS Desktop](https://qgis.org/download/)
+* [PCRaster](https://jvdkwast.github.io/qgis-processing-pcraster/)
 * PCRaster Tools plugin
 
 Inputs to the model (a boolean drainage raster, DEM and flow direction raster) need to be provided in PCRaster format.
