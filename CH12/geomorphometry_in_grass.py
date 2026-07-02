@@ -1259,7 +1259,6 @@ def aoi_3d_figure(
     )
 
     m.save(filename=Path(SAVE_DIR, f"{output_name}_aoi_3d.png"))
-    save_jpeg(m.filename, Path(SAVE_DIR, f"{output_name}_aoi_3d.jpg"))
 
 
 def overland_flow(tools: Any, elevation: str) -> None:
@@ -1804,31 +1803,31 @@ def main():
             {"mapcolor": "global_rad_356",
                 "legend_units": "Global solar radiation [Wh/m\u00b2]"},
             {"mapcolor": "twi", "legend_units": "TWI"},
-            {"mapcolor": "tpi", "output_name": "tpi_aoi_3d",
+            {"mapcolor": "tpi", "output_name": "tpi",
                 "legend_units": "TPI"},
             {"mapcolor": "d8_mfd_flowaccum",
-                "output_name": "d8_mfd_flowaccum_aoi_3d",
+                "output_name": "d8_mfd_flowaccum",
                 "legend_units": "Flow Accumulation [D8 MFD]",
                 "legend_flags": "blt", "legend_range_min": 1},
             {"mapcolor": "d8_sfd_flowaccum",
-                "output_name": "d8_sfd_flowaccum_aoi_3d",
+                "output_name": "d8_sfd_flowaccum",
                 "legend_units": "Flow Accumulation [D8 SFD]",
                 "legend_at": "12,17,8,47",
                 "legend_flags": "blt", "legend_range_min": 1},
             {"mapcolor": "dinf_sfd_flowaccum",
-                "output_name": "dinf_sfd_flowaccum_aoi_3d",
+                "output_name": "dinf_sfd_flowaccum",
                 "legend_units": "Flow Accumulation [D-infinity SFD]",
                 "legend_at": "12,17,8,47",
                 "legend_flags": "btl", "legend_range_min": 1},
             {"mapcolor": "hand_class",
-                "output_name": "hand_class_aoi_3d",
+                "output_name": "hand_class",
                 "legend_units": "Water Table Class",
                 "legend_at": "12,17,8,47", "legend_flags": "btc"},
-            {"mapcolor": "hand", "output_name": "hand_aoi_3d",
+            {"mapcolor": "hand", "output_name": "hand",
                 "legend_units": "Height above nearest drainage [m]",
                 "legend_flags": "bdt"},
             {"mapcolor": "inundation_strds_3.0",
-                "output_name": "inundation_strds_3.0_aoi_3d",
+                "output_name": "inundation_strds_3.0",
                 "legend_units": "Inundation [m]", "legend_flags": "bdt"},
         ]
         for spec in aoi_3d_specs:
