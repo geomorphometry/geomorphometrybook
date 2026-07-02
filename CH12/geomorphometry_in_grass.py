@@ -182,6 +182,16 @@ class GeoColors:
             ("85%", "#5ab4ac"),
             ("100%", "#01665e"),
         ],
+        "flow_accum": [
+            ("0%", "white"),
+            ("10%", "gray"),
+            ("20%", "yellow"),
+            ("25%", "green"),
+            ("30%", "cyan"),
+            ("65%", "blue"),
+            ("85%", "purple"),
+            ("100%", "black")
+        ],
         "hand": [
             (0, "#f7fbff"),
             (0.5, "#deebf7"),
@@ -1002,12 +1012,8 @@ def flow_accumulation(tools: Any, dem: str, threshold: int) -> None:
         legend_range_min=1,
         legend_flags="tl",
     )
-
-    tools.r_colors(
-        map="MEFA_flowaccum",
-        rules=Path(PROJECT_DIR, "config/flow_accum_colors.txt"),
-        flags="g",
-    )
+    
+    GeoColors.colors("MEFA_flowaccum", "flow_accum", tools, flags="g")
     aoi_map_figure(
         tools=tools,
         map_name="MEFA_flowaccum",
