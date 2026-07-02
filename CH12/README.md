@@ -30,7 +30,7 @@ By default, the scripts are set up to download the DSM and DTM directly from Zen
 
 #### Python
 
-1. Ensure you have Python 3.8 or higher installed.
+1. Ensure you have Python 3.10+ installed.
 2. Install the required Python packages using pip:
 
     * matplotlib
