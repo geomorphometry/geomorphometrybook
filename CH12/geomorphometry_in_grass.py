@@ -953,7 +953,7 @@ def flow_accumulation(tools: Any, dem: str, threshold: int) -> None:
         stream="d8_mfd_streams",
         basin="d8_mfd_basins2",
         threshold=threshold,
-        flags="a4",
+        flags="a",
         quiet=True,
     )
 
@@ -1012,7 +1012,7 @@ def flow_accumulation(tools: Any, dem: str, threshold: int) -> None:
         legend_range_min=1,
         legend_flags="tl",
     )
-    
+
     GeoColors.colors("MEFA_flowaccum", "flow_accum", tools, flags="g")
     aoi_map_figure(
         tools=tools,
@@ -1029,6 +1029,9 @@ def flow_accumulation(tools: Any, dem: str, threshold: int) -> None:
 def twi_calculation(tools: Any, flow_accumulation: str, slope: str) -> None:
     """Calculate Topographic Wetness Index (TWI) and save an AOI figure."""
     print("Calculating Topographic Wetness Index (TWI)...")
+
+    # Note: log is the natural log, not base 10.
+    # The slope is in degrees and is getting converted to radians
     expression = (
         f"twi = log({flow_accumulation} / tan({slope} * 3.14159 / 180))"
     )
@@ -1521,7 +1524,6 @@ def main():
         # Compute flow accumulation using multiple methods
         with gs.RegionManager(
             region=AOI_REGION,
-            raster=LIDAR_DTM_1M,
             res=1,
             flags="a"
         ):
