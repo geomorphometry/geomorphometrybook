@@ -611,6 +611,7 @@ def aoi_map_figure(
             border_color="none",
             title=legend_title if legend_title != "" else "",
             title_fontsize=24,
+            units=legend_units,
             range=legend_range,
             flags=legend_flags,
         )
@@ -1138,7 +1139,7 @@ def hand_method(
 
     class_rules = """
     -30000 thru 0 = NULL
-    1 thru 5 = 1 Surface
+    0 thru 5 = 1 Surface
     5 thru 15 = 2 Shallow
     15 thru 30000 = 3 Deep
     """
@@ -1545,7 +1546,6 @@ def main():
 
             # prepare cartographic features.
             set_ocean_to_null(tools, elevation_map=LIDAR_DTM_1M)
-            create_ocean_background(tools)
 
             print("Computing skyview factor...")
             tools.r_skyview(
