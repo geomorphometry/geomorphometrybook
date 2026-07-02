@@ -5,14 +5,14 @@
 #
 # This script mirrors geomorphometry_in_grass.sh, performing the chapter's
 # geomorphometric analyses on the Ponui Island LiDAR data set using the
-# `rgrass` package to drive GRASS GIS 8.5+ from R.
+# `rgrass` package to drive GRASS 8.5+ from R.
 #
 # It does NOT generate figures - it only creates the analysis rasters and
 # vectors. Use geomorphometry_in_grass.py / geomorphometry_in_grass.ipynb
 # for the figure-producing workflow.
 #
 # Requirements:
-#   - GRASS GIS 8.5+ available on PATH as `grass`
+#   - GRASS 8.5+ available on PATH as `grass`
 #   - R package `rgrass` (CRAN)
 #   - GRASS add-ons from gextensions.txt (install via g.extension)
 #   - Ponui Island data: data/dsm.cog.tif, data/dtm.cog.tif, data/lidar.laz
@@ -90,7 +90,7 @@ find_gisbase <- function() {
   if (!nzchar(grass_bin)) {
     stop(
       "Could not find the `grass` executable on PATH. ",
-      "Install GRASS GIS 8.5+ or set GISBASE manually.",
+      "Install GRASS 8.5+ or set GISBASE manually.",
       call. = FALSE
     )
   }
@@ -125,7 +125,7 @@ initGRASS(
   home     = tempdir()
 )
 
-message("Running inside GRASS GIS session.")
+message("Running inside GRASS session.")
 execGRASS("g.gisenv")
 
 # -----------------------------------------------------------------------------

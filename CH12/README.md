@@ -67,7 +67,7 @@ By default, the scripts are set up to download the DSM and DTM directly from Zen
 
 The R version uses the [`rgrass`](https://cran.r-project.org/package=rgrass) package to drive GRASS from R. Like the bash script, it performs the analysis without generating figures.
 
-1. Ensure you have GRASS GIS 8.5+ installed and available as `grass` on your `PATH`.
+1. Ensure you have GRASS 8.5+ installed and available as `grass` on your `PATH`.
 
 2. Install the `rgrass` package from CRAN:
 

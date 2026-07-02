@@ -4,7 +4,7 @@
 #
 # Notes:
 # - This script is intentionally simple and does not generate figures/maps.
-# - It assumes you have GRASS GIS 8.5+ installed and available as `grass`.
+# - It assumes you have GRASS 8.5+ installed and available as `grass`.
 # - GRASS add-ons are NOT installed automatically here (see section below).
 #   This avoids failures on systems where `g.extension` is broken/mismatched.
 
@@ -73,7 +73,7 @@ if [[ -z "${GISRC:-}" && "${IN_GRASS_EXEC:-}" != "1" ]]; then
 	exec grass "$LOCATION_PATH/$MAPSET_NAME" --exec "$0" "$@"
 fi
 
-echo "Running inside GRASS GIS session."
+echo "Running inside GRASS session."
 g.gisenv
 
 # -----------------------------------------------------------------------------
