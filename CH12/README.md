@@ -20,10 +20,10 @@ By default, the scripts are set up to download the DSM and DTM directly from Zen
 
 #### Files
 
-* `geomorphometry_in_grass.py`: Main Python script showcasing geomorphometric analyses in GRASS.
-* `geomorphometry_in_grass_notebook.ipynb`: Jupyter Notebook version of the main script for interactive exploration.
-* `geomorhometry_in_grass.sh`: Shell script to set up the GRASS environment and run the Python scripts.
-* `geomorphometry_in_grass.R`: R script for similar geomorphometric analyses using GRASS.
+* `geomorphometry_in_grass.py`: Canonical Python script. Reproduces every figure shown in the chapter (plus additional 3D views) using helper abstractions for color schemes, map composition, and figure export.
+* `geomorphometry_in_grass.ipynb`: Verbose Jupyter Notebook version of the workflow. Mirrors the Python script section-by-section but inlines the abstractions (color rules, `gj.Map` composition, 3D figure code) so each GRASS command and rendering step is visible. Recommended as the learning aid.
+* `geomorphometry_in_grass.sh`: Bash CLI version of the analysis workflow (no figure generation). Useful for headless / batch runs.
+* `geomorphometry_in_grass.R`: R version of the analysis workflow via the [`rgrass`](https://cran.r-project.org/package=rgrass) package. Like the bash script, it computes the analysis rasters without generating figures.
 * `gextensions.txt`: List of GRASS add-ons required for the analyses.
 
 ### Running the Scripts
@@ -60,7 +60,27 @@ By default, the scripts are set up to download the DSM and DTM directly from Zen
     Alternatively, you can run the Jupyter Notebook for an interactive experience:
 
     ```bash
-    jupyter notebook geomorphometry_in_grass_notebook.ipynb
+    jupyter notebook geomorphometry_in_grass.ipynb
+    ```
+
+#### R
+
+The R version uses the [`rgrass`](https://cran.r-project.org/package=rgrass) package to drive GRASS from R. Like the bash script, it performs the analysis without generating figures.
+
+1. Ensure you have GRASS GIS 8.5+ installed and available as `grass` on your `PATH`.
+
+2. Install the `rgrass` package from CRAN:
+
+    ```r
+    install.packages("rgrass")
+    ```
+
+3. Install the required GRASS add-ons listed in `gextensions.txt` (same set used by the bash script).
+
+4. Run the script:
+
+    ```bash
+    Rscript geomorphometry_in_grass.R
     ```
 
 #### Shell
