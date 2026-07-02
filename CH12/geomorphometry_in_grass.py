@@ -1608,13 +1608,12 @@ def main():
                 threshold=100000,
             )
 
-            # Convert basins to vectors and extract basin 2
+            # Convert basins to vectors
             tools.r_to_vect(
                 input="d8_mfd_basins2",
                 output="d8_mfd_basins2",
                 type="area"
             )
-            tools.v_extract(input="d8_mfd_basins2", cats="2", output="basin2")
 
             # Figure overlay options
             extra_vectors = [
