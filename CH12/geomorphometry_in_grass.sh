@@ -130,14 +130,6 @@ for res in 150 250 500; do
 	r.resamp.interp input="$DTM_NAME" output="${DTM_NAME}_${res}m" method=bilinear --quiet
 done
 
-# Optional: skyview factor (add-on)
-if have_module r.skyview; then
-	echo "Computing skyview factor (island)..."
-	r.skyview input="$DTM_NAME" output="lidar_dtm_skyview" ndir=8 --quiet
-else
-	warn_missing_addon r.skyview
-fi
-
 # -----------------------------------------------------------------------------
 # 2) AOI: region, LiDAR processing, interpolation, derivatives
 # -----------------------------------------------------------------------------
@@ -174,14 +166,6 @@ r.slope.aspect elevation="$LIDAR_DTM_1M" \
 	slope="${LIDAR_DTM_1M}_slope" aspect="${LIDAR_DTM_1M}_aspect" \
 	pcurvature="${LIDAR_DTM_1M}_pcurv" tcurvature="${LIDAR_DTM_1M}_tcurv" \
 	dx="${LIDAR_DTM_1M}_dx" dy="${LIDAR_DTM_1M}_dy" --quiet
-
-# Optional: skyview factor (add-on)
-if have_module r.skyview; then
-	echo "Computing skyview factor (AOI)..."
-	r.skyview input="$LIDAR_DTM_1M" output="$LIDAR_DTM_1M_SKYVIEW" ndir=8 --quiet
-else
-	warn_missing_addon r.skyview
-fi
 
 # Optional: edge-preserving smoothing (module availability depends on build)
 if have_module r.smooth.edgepreserve; then

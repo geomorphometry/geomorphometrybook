@@ -51,7 +51,6 @@ DTM_RELIEF           <- "dtm_relief"
 LIDAR_DTM_10M        <- "lidar_dtm_10m"
 LIDAR_DTM_1M         <- "lidar_dtm_1m"
 LIDAR_DTM_1M_RELIEF  <- "lidar_dtm_1m_relief"
-LIDAR_DTM_1M_SKYVIEW <- "lidar_dtm_1m_skyview"
 
 AOI_REGION  <- "aoi"
 AOI_RES     <- 1
@@ -193,17 +192,6 @@ for (res in c(150, 250, 500)) {
   )
 }
 
-# Optional: skyview factor (add-on)
-if (have_module("r.skyview")) {
-  message("Computing skyview factor (island)...")
-  execGRASS("r.skyview",
-    input = DTM_NAME, output = "lidar_dtm_skyview",
-    ndir = "8", flags = "quiet"
-  )
-} else {
-  warn_missing_addon("r.skyview")
-}
-
 # -----------------------------------------------------------------------------
 # 2) AOI: region, LiDAR processing, interpolation, derivatives
 # -----------------------------------------------------------------------------
@@ -266,17 +254,6 @@ execGRASS("r.slope.aspect",
   dy         = paste0(LIDAR_DTM_1M, "_dy"),
   flags = "quiet"
 )
-
-# Optional: skyview factor (add-on)
-if (have_module("r.skyview")) {
-  message("Computing skyview factor (AOI)...")
-  execGRASS("r.skyview",
-    input = LIDAR_DTM_1M, output = LIDAR_DTM_1M_SKYVIEW,
-    ndir = "8", flags = "quiet"
-  )
-} else {
-  warn_missing_addon("r.skyview")
-}
 
 # Optional: edge-preserving smoothing (module availability depends on build)
 if (have_module("r.smooth.edgepreserve")) {
