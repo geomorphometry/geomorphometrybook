@@ -1,7 +1,7 @@
 d.region.grid
 r.flowaccumulation
-r.stream.order
-r.stream.distance
 r.hand
-r.tpi
 r.skyview
+r.stream.distance
+r.stream.order
+r.tpi

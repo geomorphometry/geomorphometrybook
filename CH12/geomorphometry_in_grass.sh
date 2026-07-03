@@ -1,12 +1,23 @@
 #!/usr/bin/env bash
 
-# Geomorphometry in GRASS (Chapter 12) - CLI workflow
+##############################################################################
+# MODULE:    geomorphometry_in_grass.py
+#
+# AUTHOR(S): Corey T. White <ctwhite48@gmail.com>
+#
+# PURPOSE:   Geomorphometry in GRASS (Chapter 12) - CLI workflow
 #
 # Notes:
-# - This script is intentionally simple and does not generate figures/maps.
-# - It assumes you have GRASS 8.5+ installed and available as `grass`.
-# - GRASS add-ons are NOT installed automatically here (see section below).
-#   This avoids failures on systems where `g.extension` is broken/mismatched.
+#       - This script is intentionally simple and does not generate figures/maps.
+#       - It assumes you have GRASS 8.5+ installed and available as `grass`.
+#       - GRASS add-ons are NOT installed automatically here (see section below).
+#         This avoids failures on systems where `g.extension` is broken/mismatched.
+#
+# COPYRIGHT: (C) 2026 by Corey T. White
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+##############################################################################
+
 
 set -euo pipefail
 
