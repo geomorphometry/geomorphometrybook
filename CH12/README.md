@@ -1,6 +1,6 @@
 # Chapter 12 - GRASS Examples
 
-This directory contains Python scripts that demonstrate geomorphometric analyses using [GRASS](https://grass.osgeo.org). The scripts cover various topics such as terrain derivatives, flow accumulation, hydrological modeling, solar radiation, and volumetric analysis.
+This directory contains Python scripts that demonstrate geomorphometric analyses using [GRASS](https://grass.osgeo.org). The scripts cover various topics including terrain derivatives, flow accumulation, hydrological modeling, solar radiation, and volumetric analysis.
 
 ## Setup
 
@@ -10,19 +10,19 @@ To run the scripts, you will need to have GRASS (version >=8.5) installed on you
 
 #### Data
 
-The data of Ponui Island can be downloaded from [Zenodo](https://doi.org/10.5281/zenodo.18314107). The dataset includes a Digital Surface Model (DSM), Digital Terrain Model (DTM), and LiDAR point cloud data. Below are the direct download links for the DSM, DTM, and LiDAR data:
+The Ponui Island data can be downloaded from [Zenodo](https://doi.org/10.5281/zenodo.18314107). The dataset includes a Digital Surface Model (DSM), Digital Terrain Model (DTM), and LiDAR point cloud data. Below are the direct download links for the DSM, DTM, and LiDAR data:
 
 * [Download DSM Ponui Island (Zenodo)](https://zenodo.org/records/18314107/files/DEM_ponui_island_dsm.tif?download=1)
 * [Download DTM Ponui Island (Zenodo)](https://zenodo.org/records/18314107/files/DEM_ponui_island_dtm.tif?download=1)
 * [Download LAS Ponui Island LiDAR (Zenodo)](https://zenodo.org/records/18314107/files/LAS_ponui_island_lidar.zip?download=1)
 
-By default, the scripts are set up to download the DSM and DTM directly from Zenodo. If you prefer to use local files, simply uncomment the lines in the configuration section of the script and adjust the paths accordingly. However, the LiDAR data must be downloaded and extracted manually, as the `v.in.pdal` command does not currently support use of the GDAL virtual file system (`vsicul` and `vsizip`).
+The scripts are set up by default to download the DSM and DTM directly from Zenodo. If you prefer to use local files, simply uncomment the lines in the configuration section of the script and adjust the paths accordingly. However, the LiDAR data must be downloaded and extracted manually, as the `v.in.pdal` command does not currently support the use of the GDAL virtual file system (`vsicul` and `vsizip`).
 
 #### Files
 
 * `geomorphometry_in_grass.py`: Canonical Python script. Reproduces every figure shown in the chapter (plus additional 3D views) using helper abstractions for color schemes, map composition, and figure export.
-* `geomorphometry_in_grass.ipynb`: Verbose Jupyter Notebook version of the workflow. Mirrors the Python script section-by-section but inlines the abstractions (color rules, `gj.Map` composition, 3D figure code) so each GRASS command and rendering step is visible. Recommended as the learning aid.
-* `geomorphometry_in_grass.sh`: Bash CLI version of the analysis workflow (no figure generation). Useful for headless / batch runs.
+* `geomorphometry_in_grass.ipynb`: Verbose Jupyter Notebook version of the workflow. Mirrors the Python script section-by-section but inlines the abstractions (color rules, `gj.Map` composition, 3D figure code) so each GRASS command and rendering step is visible. Recommended as a learning aid.
+* `geomorphometry_in_grass.sh`: Bash command-line interface (CLI) version of the analysis workflow (no figure generation). Useful for headless / batch runs.
 * `geomorphometry_in_grass.R`: R version of the analysis workflow via the [`rgrass`](https://cran.r-project.org/package=rgrass) package. Like the bash script, it computes the analysis rasters without generating figures.
 * `gextensions.txt`: List of GRASS add-ons required for the analyses.
 
@@ -30,14 +30,14 @@ By default, the scripts are set up to download the DSM and DTM directly from Zen
 
 #### Python
 
-1. Ensure you have Python 3.10+ installed.
-2. Install the required Python packages using pip:
+1. Ensure that you have Python 3.10+ installed.
+2. Install the following required Python packages using `pip`:
 
     * matplotlib
     * Pillow
     * numpy
 
-    Or install them using the `requirements.txt` file:
+    Alternatively, install them using the `requirements.txt` file:
 
     ```bash
     python3 -m venv venv
@@ -115,13 +115,13 @@ The `geomorphometry_in_grass.sh` script is a simplified version of the Python sc
 ### Running on Windows
 
 All four versions drive GRASS, which runs on Windows, so the analysis works
-there. The scripts are written for a Unix shell with `grass` on the `PATH`, so
-pick one of the two paths below and then follow the per-language steps above.
+there. The scripts are written for a Unix shell with `grass` on the `PATH`.
+Pick one of the two paths below and then follow the per-language steps above.
 
 #### Recommended: WSL2
 
-The simplest, most reliable option is the Windows Subsystem for Linux, which
-runs the scripts exactly as on Linux with no edits.
+The simplest and most reliable option is the Windows Subsystem for Linux (WSL2),
+which runs the scripts exactly as they would on Linux with no edits.
 
 1. Install WSL2 with Ubuntu (in PowerShell, once):
 
@@ -139,7 +139,7 @@ runs the scripts exactly as on Linux with no edits.
    It bundles PDAL, which `r.in.pdal` and `v.in.pdal` require.
 2. Launch the **OSGeo4W Shell** (from the Start menu), not `cmd` or PowerShell,
    so that `grass` and the GRASS tools are on the `PATH`.
-3. From that shell, run the Python script or notebook, or the R script:
+3. From the OSGeo4W shell, run the Python script or notebook, or the R script:
 
     ```bat
     python geomorphometry_in_grass.py
@@ -149,7 +149,7 @@ runs the scripts exactly as on Linux with no edits.
 
 Notes for native Windows:
 
-* The `geomorphometry_in_grass.sh` version needs a Bash shell (WSL2 or Git Bash);
+* The `geomorphometry_in_grass.sh` version requires a Bash shell (WSL2 or Git Bash);
   it does not run in `cmd` or PowerShell.
 * If the Python script reports `GRASS executable 'grass' not found on PATH`, you
   are not in the OSGeo4W Shell. Open it and retry, or set the `GISBASE`
