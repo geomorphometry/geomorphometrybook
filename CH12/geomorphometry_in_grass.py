@@ -26,7 +26,9 @@
 from pathlib import Path
 from typing import Any, Literal, TYPE_CHECKING
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 from io import StringIO
@@ -341,25 +343,48 @@ def save_jpeg(image_path: str | Path, output_path: str | Path) -> None:
         print(f"An error occurred: {e}")
 
 
+def _grass_python_path() -> str:
+    """Locate the GRASS Python path across Linux, macOS, and Windows."""
+    # If GISBASE is known, the Python path is <GISBASE>/etc/python; this skips
+    # the launcher entirely (handy on Windows, matches the README advice).
+    gisbase = os.environ.get("GISBASE")
+    if gisbase:
+        candidate = os.path.join(gisbase, "etc", "python")
+        if os.path.isdir(candidate):
+            return candidate
+
+    # Otherwise find the grass launcher. shutil.which honors PATHEXT on Windows,
+    # so it resolves grass.bat / grass.exe; GRASS_BIN overrides.
+    launcher = os.environ.get("GRASS_BIN") or shutil.which("grass")
+    if not launcher:
+        raise RuntimeError(
+            "GRASS launcher not found. Run inside a GRASS-enabled shell "
+            "(the OSGeo4W Shell on Windows), or set the GRASS_BIN or GISBASE "
+            "environment variable."
+        )
+
+    # Windows batch launchers (grass.bat) must run through cmd.exe;
+    # CreateProcess cannot execute a .bat directly.
+    cmd = [launcher, "--config", "python_path"]
+    if os.name == "nt" and launcher.lower().endswith((".bat", ".cmd")):
+        cmd = ["cmd", "/c", *cmd]
+
+    try:
+        return subprocess.check_output(cmd, text=True).strip()
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise RuntimeError(
+            f"Failed to query GRASS via '{launcher}'. Set GRASS_BIN or GISBASE, "
+            "or run inside the OSGeo4W Shell on Windows."
+        ) from exc
+
+
 def _add_grass_to_syspath() -> None:
     """Add GRASS Python modules to `sys.path`.
 
-    Uses `grass --config python_path`.
     Imports of `grass.*` stay localized to runtime so the script can be
     imported or syntax-checked without GRASS.
     """
-
-    try:
-        grass_python_path = subprocess.check_output(
-            ["grass", "--config", "python_path"],
-            text=True,
-        ).strip()
-    except FileNotFoundError as exc:
-        raise RuntimeError(
-            "GRASS executable 'grass' not found on PATH. "
-            "Install GRASS or ensure 'grass' is available."
-        ) from exc
-
+    grass_python_path = _grass_python_path()
     if grass_python_path and grass_python_path not in sys.path:
         sys.path.append(grass_python_path)
 
