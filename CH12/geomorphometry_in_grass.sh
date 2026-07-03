@@ -93,6 +93,12 @@ fi
 echo "Running inside GRASS session."
 g.gisenv
 
+# Allow the workflow to be re-run against an existing project.
+export GRASS_OVERWRITE=1
+
+# Ensure the basin mask never survives a crash into future sessions.
+trap 'r.mask -r --quiet 2>/dev/null || true' EXIT
+
 # -----------------------------------------------------------------------------
 # Add-ons (manual install)
 # -----------------------------------------------------------------------------

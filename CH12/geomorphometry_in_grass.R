@@ -135,6 +135,9 @@ initGRASS(
 message("Running inside GRASS session.")
 execGRASS("g.gisenv")
 
+# Allow the workflow to be re-run against an existing project.
+Sys.setenv(GRASS_OVERWRITE = "1")
+
 # -----------------------------------------------------------------------------
 # 1) Import base rasters + 10m LiDAR mean DTM
 # -----------------------------------------------------------------------------
@@ -403,46 +406,49 @@ execGRASS("r.to.vect",
 )
 
 message("Masking to basin and running r.sim.water / r.sim.sediment...")
-execGRASS("r.mask", vector = "d8_mfd_basins2", flags = "quiet")
+tryCatch({
+  execGRASS("r.mask", vector = "d8_mfd_basins2", flags = "quiet")
 
-execGRASS("r.sim.water",
-  elevation = LIDAR_DTM_1M,
-  dx = paste0(LIDAR_DTM_1M, "_dx"),
-  dy = paste0(LIDAR_DTM_1M, "_dy"),
-  rain_value = "30", infil_value = "0.0", man_value = "0.2",
-  niterations = "30", output_step = "2",
-  depth = "depth", discharge = "disch",
-  random_seed = "3", nwalkers = "100000", nprocs = "4",
-  flags = "t"
-)
+  execGRASS("r.sim.water",
+    elevation = LIDAR_DTM_1M,
+    dx = paste0(LIDAR_DTM_1M, "_dx"),
+    dy = paste0(LIDAR_DTM_1M, "_dy"),
+    rain_value = "30", infil_value = "0.0", man_value = "0.2",
+    niterations = "30", output_step = "2",
+    depth = "depth", discharge = "disch",
+    random_seed = "3", nwalkers = "100000", nprocs = "4",
+    flags = "t"
+  )
 
-execGRASS("r.mapcalc",
-  expression = "max_depth = if(depth.30 >= 0.01, depth.30, null())",
-  flags = "quiet"
-)
+  execGRASS("r.mapcalc",
+    expression = "max_depth = if(depth.30 >= 0.01, depth.30, null())",
+    flags = "quiet"
+  )
 
-# Sediment transport / erosion-deposition
-execGRASS("r.mapcalc", expression = "tranin = 0.001",     flags = "quiet")
-execGRASS("r.mapcalc", expression = "detin = 0.001",      flags = "quiet")
-execGRASS("r.mapcalc", expression = "shear_stress = 0.5", flags = "quiet")
+  # Sediment transport / erosion-deposition
+  execGRASS("r.mapcalc", expression = "tranin = 0.001",     flags = "quiet")
+  execGRASS("r.mapcalc", expression = "detin = 0.001",      flags = "quiet")
+  execGRASS("r.mapcalc", expression = "shear_stress = 0.5", flags = "quiet")
 
-execGRASS("r.sim.sediment",
-  elevation = LIDAR_DTM_1M,
-  dx = paste0(LIDAR_DTM_1M, "_dx"),
-  dy = paste0(LIDAR_DTM_1M, "_dy"),
-  water_depth = "depth.30",
-  detachment_coeff = "detin", transport_coeff = "tranin",
-  shear_stress = "shear_stress", man_value = "0.04",
-  transport_capacity = "transport_capacity",
-  tlimit_erosion_deposition = "tlimit_erosion_deposition",
-  sediment_concentration = "sediment_concentration",
-  sediment_flux = "sediment_flux",
-  erosion_deposition = "erosion_deposition",
-  niterations = "30", output_step = "2",
-  random_seed = "3", nprocs = "4", nwalkers = "100000"
-)
-
-execGRASS("r.mask", flags = c("r", "quiet"))
+  execGRASS("r.sim.sediment",
+    elevation = LIDAR_DTM_1M,
+    dx = paste0(LIDAR_DTM_1M, "_dx"),
+    dy = paste0(LIDAR_DTM_1M, "_dy"),
+    water_depth = "depth.30",
+    detachment_coeff = "detin", transport_coeff = "tranin",
+    shear_stress = "shear_stress", man_value = "0.04",
+    transport_capacity = "transport_capacity",
+    tlimit_erosion_deposition = "tlimit_erosion_deposition",
+    sediment_concentration = "sediment_concentration",
+    sediment_flux = "sediment_flux",
+    erosion_deposition = "erosion_deposition",
+    niterations = "30", output_step = "2",
+    random_seed = "3", nprocs = "4", nwalkers = "100000"
+  )
+}, finally = {
+  # Never leave the mask active in PERMANENT, even on error.
+  try(execGRASS("r.mask", flags = c("r", "quiet")), silent = TRUE)
+})
 
 # -----------------------------------------------------------------------------
 # 5) Solar radiation, TPI, landforms
