@@ -28,10 +28,6 @@ DTM_TIF="/vsicurl/https://zenodo.org/records/18314107/files/DEM_ponui_island_dtm
 # DSM_TIF="$PROJECT_DIR/data/dsm.cog.tif"
 # DTM_TIF="$PROJECT_DIR/data/dtm.cog.tif"
 LIDAR_LAZ="$PROJECT_DIR/data/LAS_ponui_island_lidar.laz"
-if [ ! -e "$LIDAR_LAZ" ]; then
-  echo "Error: File '$LIDAR_LAZ' does not exist." >&2
-  exit 1
-fi
 
 # --- Raster names used in the chapter workflow ---
 DSM_NAME="dsm_10m"
@@ -47,6 +43,19 @@ AOI_REGION="aoi"
 AOI_RES="1"
 
 ISLAND_RES="10"
+
+# Set a custom number of cores to use here or
+# all available cores will be set by default.
+NPROCS=""
+
+AVAILABLE_CORES=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 1)
+
+: "${NPROCS:=$AVAILABLE_CORES}"
+
+if [[ ! "$NPROCS" =~ ^[0-9]+$ ]] || (( NPROCS < 1 )); then
+    echo "Warning: Invalid NPROCS ('$NPROCS'). Falling back to $AVAILABLE_CORES cores." >&2
+    NPROCS=$AVAILABLE_CORES
+fi
 
 require_file() {
 	local path="$1"
@@ -163,7 +172,7 @@ v.surf.rst input="lidar_be" elevation="$LIDAR_DTM_1M" \
 	slope="${LIDAR_DTM_1M}_rst_slope" aspect="${LIDAR_DTM_1M}_rst_aspect" \
 	pcurvature="${LIDAR_DTM_1M}_rst_pcurv" tcurvature="${LIDAR_DTM_1M}_rst_tcurv" \
 	mcurvature="${LIDAR_DTM_1M}_rst_mcurv" \
-	tension=300 smooth=0.1 npmin=200 dmin=1.5 nprocs=30 -t --quiet
+	tension=300 smooth=0.1 npmin=200 dmin=1.5 nprocs=$NPROCS -t --quiet
 
 r.null map="$LIDAR_DTM_1M" setnull="-9999-0" --quiet
 
@@ -260,7 +269,7 @@ r.sim.water elevation="$LIDAR_DTM_1M" dx="${LIDAR_DTM_1M}_dx" dy="${LIDAR_DTM_1M
 	rain_value=30 infil_value=0.0 man_value=0.2 \
 	niterations=30 output_step=2 \
 	depth="depth" discharge="disch" \
-	random_seed=3 nwalkers=100000 nprocs=6 -t
+	random_seed=3 nwalkers=100000 nprocs=$NPROCS -t
 
 r.mapcalc "max_depth = if(depth.30 >= 0.01, depth.30, null())" --quiet
 
@@ -277,7 +286,7 @@ r.sim.sediment elevation="$LIDAR_DTM_1M" dx="${LIDAR_DTM_1M}_dx" dy="${LIDAR_DTM
 	sediment_concentration="sediment_concentration" \
 	sediment_flux="sediment_flux" \
 	erosion_deposition="erosion_deposition" \
-	niterations=30 output_step=2 random_seed=3 nprocs=26 nwalkers=100000
+	niterations=30 output_step=2 random_seed=3 nprocs=$NPROCS nwalkers=100000
 
 r.mask -r --quiet
 

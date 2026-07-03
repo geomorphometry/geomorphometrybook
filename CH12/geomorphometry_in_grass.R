@@ -240,7 +240,7 @@ execGRASS("v.surf.rst",
   tcurvature = paste0(LIDAR_DTM_1M, "_rst_tcurv"),
   mcurvature = paste0(LIDAR_DTM_1M, "_rst_mcurv"),
   tension = "300", smooth = "0.1", npmin = "200",
-  dmin = "1.5", nprocs = "30",
+  dmin = "1.5", nprocs = "4",
   flags = c("t", "quiet")
 )
 
@@ -412,7 +412,7 @@ execGRASS("r.sim.water",
   rain_value = "30", infil_value = "0.0", man_value = "0.2",
   niterations = "30", output_step = "2",
   depth = "depth", discharge = "disch",
-  random_seed = "3", nwalkers = "100000", nprocs = "6",
+  random_seed = "3", nwalkers = "100000", nprocs = "4",
   flags = "t"
 )
 
@@ -439,7 +439,7 @@ execGRASS("r.sim.sediment",
   sediment_flux = "sediment_flux",
   erosion_deposition = "erosion_deposition",
   niterations = "30", output_step = "2",
-  random_seed = "3", nprocs = "26", nwalkers = "100000"
+  random_seed = "3", nprocs = "4", nwalkers = "100000"
 )
 
 execGRASS("r.mask", flags = c("r", "quiet"))

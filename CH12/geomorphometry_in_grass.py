@@ -80,6 +80,37 @@ SAVE_DIR = Path(PROJECT_DIR, "figures")
 
 COLOR_OCEAN = "#0F78BE"
 
+# Define custom number of core for processing 
+# Must be an integer > 0
+NPROCS = None
+
+def get_nprocs_workers(nproc = None) -> int:
+    if nproc is None:
+        if hasattr(os, "process_cpu_count"):
+            return os.process_cpu_count()
+    
+        if hasattr(os, "sched_getaffinity"):
+            try:
+                return len(os.sched_getaffinity(0))
+            except NotImplementedError:
+                pass
+        
+        cores = os.cpu_count() or 1
+        return min(32, cores + 4)
+
+    if not isinstance(nproc, int) or isinstance(nproc, bool):
+        raise TypeError(
+            f"nproc must be an integer or None, got {type(nproc).__name__}"
+        )
+
+    if nproc < 1:
+        raise ValueError(f"nproc must be 1 or greater, got {nproc}")
+
+    return nproc
+
+
+NPROCS = get_nprocs_workers()
+
 
 def r_univar_json(tools: "Tools", map_name: str, **kwargs) -> dict:
     """Return `r.univar` JSON output with a fallback for malformed escapes.
@@ -781,7 +812,7 @@ def create_lidar_dem_rst(tools: Any, points: str, optimization: dict) -> None:
             mcurvature=f"{LIDAR_DTM_1M}_rst_mcurv",
             smooth=smooth,
             tension=tension,
-            nprocs=30,
+            nprocs=NPROCS,
             npmin=npmin,
             dmin=dmin,
             flags=flags,
@@ -1245,7 +1276,7 @@ def overland_flow(tools: Any, elevation: str) -> None:
         discharge="disch",  # m3/s
         random_seed=3,
         nwalkers=100000,
-        nprocs=6,
+        nprocs=NPROCS,
         flags="t",
     )
 
@@ -1280,7 +1311,7 @@ def erosion(tools: Any, elevation: str) -> None:
         niterations=30,
         output_step=2,
         random_seed=3,
-        nprocs=26,
+        nprocs=NPROCS,
         nwalkers=100000,
     )
 
