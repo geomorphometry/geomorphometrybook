@@ -705,7 +705,7 @@ def resample_dem(tools: Any, dem: str, resolutions: list[float]) -> None:
     from grass.exceptions import CalledModuleError
 
     for res in resolutions:
-        with gs.RegionManager(res=res, raster=dem, flags=""):
+        with gs.RegionManager(res=res, raster=dem):
             resampled_name = f"{dem}_{int(res)}m"
             try:
                 tools.r_resamp_interp(
@@ -1482,7 +1482,6 @@ def main():
 
         # Create 1km grid for reference
         tools.v_mkgrid(map="grid_1k_1k", box="1000,1000")
-        tools.v_extract(input="grid_1k_1k", cats=27, output=AOI_REGION)
         full_region_map_figure(
             tools=tools,
             map_name=DTM_NAME,
