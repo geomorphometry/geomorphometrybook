@@ -13,12 +13,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$SCRIPT_DIR"
 
-# --- GRASS project/location settings ---
-LOCATION_NAME="ponui"
+# --- GRASS project settings ---
+PROJECT_NAME="ponui"
 MAPSET_NAME="PERMANENT"
 EPSG_CODE="2193"
 GISDBASE="$PROJECT_DIR"
-LOCATION_PATH="$GISDBASE/$LOCATION_NAME"
+PROJECT_PATH="$GISDBASE/$PROJECT_NAME"
 
 # --- Input data (Remote files by default) ---
 DSM_TIF="/vsicurl/https://zenodo.org/records/18314107/files/DEM_ponui_island_dsm.tif?download=1"
@@ -67,18 +67,18 @@ warn_missing_addon() {
 }
 
 if [[ -z "${GISRC:-}" && "${IN_GRASS_EXEC:-}" != "1" ]]; then
-	# Outside GRASS: create location if needed, then re-exec inside GRASS.
+	# Outside GRASS: create project if needed, then re-exec inside GRASS.
 	require_file "$DSM_TIF"
 	require_file "$DTM_TIF"
 	require_file "$LIDAR_LAZ"
 
-	if [[ ! -d "$LOCATION_PATH" ]]; then
-		echo "Creating GRASS location at: $LOCATION_PATH (EPSG:$EPSG_CODE)"
-		grass -c "EPSG:$EPSG_CODE" -e "$LOCATION_PATH" >/dev/null
+	if [[ ! -d "$PROJECT_PATH" ]]; then
+		echo "Creating GRASS project at: $PROJECT_PATH (EPSG:$EPSG_CODE)"
+		grass -c "EPSG:$EPSG_CODE" -e "$PROJECT_PATH" >/dev/null
 	fi
 
 	export IN_GRASS_EXEC=1
-	exec grass "$LOCATION_PATH/$MAPSET_NAME" --exec "$0" "$@"
+	exec grass "$PROJECT_PATH/$MAPSET_NAME" --exec "$0" "$@"
 fi
 
 echo "Running inside GRASS session."
@@ -91,7 +91,7 @@ g.gisenv
 # - r.skyview, r.hand, r.flowaccumulation, r.tpi, r.stream.order
 #
 # If your `g.extension` is working, you can install them once via:
-#   grass "$LOCATION_PATH/$MAPSET_NAME" --exec g.extension extension=r.hand
+#   grass "$PROJECT_PATH/$MAPSET_NAME" --exec g.extension extension=r.hand
 #
 # If `g.extension` is broken on your machine (e.g. RuntimePaths.is_cmake_build),
 # fix your GRASS installation consistency first, or install add-ons via your
@@ -313,4 +313,4 @@ else
 	warn_missing_addon r.param.scale
 fi
 
-echo "Done. Analysis rasters are now in: $LOCATION_PATH/$MAPSET_NAME"
+echo "Done. Analysis rasters are now in: $PROJECT_PATH/$MAPSET_NAME"

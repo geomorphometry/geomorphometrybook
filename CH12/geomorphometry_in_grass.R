@@ -34,7 +34,7 @@ script_path <- tryCatch(
 )
 PROJECT_DIR <- dirname(script_path)
 
-LOCATION_NAME <- "ponui"
+PROJECT_NAME <- "ponui"
 MAPSET_NAME   <- "PERMANENT"
 EPSG_CODE     <- "2193"
 GISDBASE      <- PROJECT_DIR
@@ -116,17 +116,17 @@ require_file(DTM_TIF)
 require_file(LIDAR_LAZ)
 
 gisbase <- find_gisbase()
-location_path <- file.path(GISDBASE, LOCATION_NAME)
-if (!dir.exists(location_path)) {
-  message(sprintf("Creating GRASS location at: %s (EPSG:%s)",
-                  location_path, EPSG_CODE))
-  system2("grass", c("-c", paste0("EPSG:", EPSG_CODE), "-e", location_path))
+project_path <- file.path(GISDBASE, PROJECT_NAME)
+if (!dir.exists(project_path)) {
+  message(sprintf("Creating GRASS project at: %s (EPSG:%s)",
+                  project_path, EPSG_CODE))
+  system2("grass", c("-c", paste0("EPSG:", EPSG_CODE), "-e", project_path))
 }
 
 initGRASS(
   gisBase  = gisbase,
   gisDbase = GISDBASE,
-  location = LOCATION_NAME,
+  location = PROJECT_NAME,
   mapset   = MAPSET_NAME,
   override = TRUE,
   home     = tempdir()
@@ -442,16 +442,6 @@ execGRASS("r.sim.sediment",
   random_seed = "3", nprocs = "26", nwalkers = "100000"
 )
 
-# Thickness estimate (simple, no percentile-based clipping)
-execGRASS("r.mapcalc",
-  expression = "thickness_m = (erosion_deposition * 30 * 60) / 1500.0",
-  flags = "quiet"
-)
-execGRASS("r.mapcalc",
-  expression = "thickness_mm = thickness_m * 1000.0",
-  flags = "quiet"
-)
-
 execGRASS("r.mask", flags = c("r", "quiet"))
 
 # -----------------------------------------------------------------------------
@@ -509,4 +499,4 @@ if (have_module("r.param.scale")) {
 }
 
 message(sprintf("Done. Analysis rasters are now in: %s/%s",
-                location_path, MAPSET_NAME))
+                project_path, MAPSET_NAME))
