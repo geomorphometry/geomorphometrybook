@@ -89,7 +89,7 @@ The `geomorphometry_in_grass.sh` script is a simplified version of the Python sc
 
 1. Ensure you have GRASS installed and available as `grass` in your command line.
 
-2. Install the required GRASS add-ons listed in `gextensions.txt` using the `g.extension` command in GRASS. You can do this by running the following commands in the GRASS command line:
+2. Install the required GRASS add-ons listed in `gextensions.txt` using the `g.extension` command in GRASS. You can do this by running the following commands in the GRASS command line or the script will install them for you:
 
     ```bash
     g.extension extension=r.flowaccumulation

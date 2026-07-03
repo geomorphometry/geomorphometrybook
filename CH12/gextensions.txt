@@ -3,6 +3,5 @@ r.flowaccumulation
 r.stream.order
 r.stream.distance
 r.hand
-r.colors.matplotlib
 r.tpi
 r.skyview
