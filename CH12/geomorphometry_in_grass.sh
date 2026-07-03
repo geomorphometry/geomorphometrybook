@@ -279,10 +279,6 @@ r.sim.sediment elevation="$LIDAR_DTM_1M" dx="${LIDAR_DTM_1M}_dx" dy="${LIDAR_DTM
 	erosion_deposition="erosion_deposition" \
 	niterations=30 output_step=2 random_seed=3 nprocs=26 nwalkers=100000
 
-# Thickness estimate (simple, no percentile-based clipping)
-r.mapcalc "thickness_m = (erosion_deposition * 30 * 60) / 1500.0" --quiet
-r.mapcalc "thickness_mm = thickness_m * 1000.0" --quiet
-
 r.mask -r --quiet
 
 # -----------------------------------------------------------------------------

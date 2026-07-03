@@ -243,45 +243,6 @@ class GeoColors:
         vhigh = float(high["value"])
         return max(abs(vlow), abs(vhigh))
 
-    @classmethod
-    def adaptive_color_schemes(
-        cls,
-        tools,
-        map_name: str,
-        palette_name: str,
-        lower: int = 1,
-        upper: int = 99,
-        **kwargs
-    ) -> None:
-        """
-        Adaptive, perceptually uniform diverging color scheme for
-        erosion/deposition maps using percentile-based robust clipping.
-        """
-        half_range = cls._get_symmetric_range_percentile(
-            tools,
-            map_name,
-            lower,
-            upper
-        )
-
-        palette = cls.COLOR_SCHEMES.get(palette_name)
-        if palette is None:
-            print(f"Color scheme '{palette_name}' not found.")
-            return
-        palette_colors = palette.get("colors", [])
-        palette_breaks = palette.get("norm_breaks", [])
-        zipped_breaks = zip(palette_breaks, palette_colors)
-        color_palette = [
-            (f"{nb * half_range}", col) for nb, col in zipped_breaks
-        ]
-
-        color_scheme = cls._create_color_scheme(color_palette)
-        tools.r_colors(
-            **kwargs,
-            map=map_name,
-            rules=color_scheme
-        )
-
     @staticmethod
     def _create_color_scheme(rules: list[tuple]) -> StringIO:
         """
