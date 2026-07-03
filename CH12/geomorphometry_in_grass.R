@@ -17,6 +17,8 @@
 #   - GRASS add-ons from gextensions.txt (install via g.extension)
 #   - Ponui Island data: data/dsm.cog.tif, data/dtm.cog.tif, data/lidar.laz
 #     (download from Zenodo - see README.md)
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
 ###############################################################################
 
 suppressPackageStartupMessages(library(rgrass))

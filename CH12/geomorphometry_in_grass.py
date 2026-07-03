@@ -4,10 +4,10 @@
 # MODULE:    geomorphometry_in_grass.py
 #
 # AUTHOR(S): Corey T. White <ctwhite48@gmail.com>
-#            Helena Mitasova <>
-#            Markus Neteler <>
-#            Anna Petrasova <>
-#            Jaroslav Hofierka <>
+#            Helena Mitasova <hmitaso@ncsu.edu>
+#            Markus Neteler <neteler@osgeo.org>
+#            Anna Petrasova <akratoc@ncsu.edu>
+#            Jaroslav Hofierka <jhofierka@gmail.com>
 #
 # PURPOSE:   This script supplements the chapter "Geomorphometry in GRASS"
 #            from the Geomorphometry book and generates the data sets presented
@@ -17,9 +17,7 @@
 # COPYRIGHT: (C) 2025-2026 by Corey T. White, Helena Mitasova, Markus Neteler,
 #            Anna Petrasova, Jaroslav Hofierka and the GRASS Development Team
 #
-#            This program is free software under the GNU General Public
-#            License (>=v2). Read the file COPYING that comes with GRASS
-#            for details.
+# SPDX-License-Identifier: GPL-2.0-or-later
 ##############################################################################
 
 
