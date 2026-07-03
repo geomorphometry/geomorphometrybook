@@ -470,12 +470,12 @@ def full_region_map_figure(
         at=(34, 53),
         size=2.25,
         color="#FDFDFD",
-        font="Fira Sans Condensed Bold",
+        font="sans",
     )
     m.d_legend(
         raster=map_name,
         at="4,21,82,85",
-        font="Fira Sans Condensed Light",
+        font="sans",
         fontsize=24,
         border_color="#FDFDFD",
         bgcolor=COLOR_OCEAN,
@@ -491,7 +491,7 @@ def full_region_map_figure(
         length=2,
         units="kilometers",
         color="#FDFDFD",
-        font="Fira Sans Condensed Light",
+        font="sans",
         fontsize=24,
         flags="n",
     )
@@ -595,14 +595,14 @@ def aoi_map_figure(
             at=text_at,
             size=4,
             color="white",
-            font="Fira Sans Condensed Bold",
+            font="sans",
         )
 
         legend_map = legend if legend else map_name
         m.d_legend(
             raster=legend_map,
             at=legend_at,
-            font="Fira Sans Condensed Light",
+            font="sans",
             fontsize=21,
             border_color="none",
             title=legend_title if legend_title != "" else "",
@@ -613,7 +613,7 @@ def aoi_map_figure(
         )
         m.d_barscale(
             at=barscale_at,
-            font="Fira Sans Condensed Light",
+            font="sans",
             fontsize=21,
             length=250,
             bgcolor="none",
@@ -1231,7 +1231,7 @@ def aoi_3d_figure(
     m.overlay.d_legend(
         raster=mapcolor,
         at=legend_at,
-        font="Fira Sans Condensed Light",
+        font="sans",
         fontsize=21,
         border_color="none",
         title=f"{legend_units}",
@@ -1240,7 +1240,7 @@ def aoi_3d_figure(
     )
     m.overlay.d_barscale(
         at=(60, 12),
-        font="Fira Sans Condensed Light",
+        font="sans",
         fontsize=21,
         length=200,
         flags="",
@@ -1250,7 +1250,7 @@ def aoi_3d_figure(
         at=(53, 40),
         size=3,
         color="white",
-        font="Fira Sans Condensed Bold",
+        font="sans",
     )
 
     m.save(filename=Path(SAVE_DIR, f"{output_name}_aoi_3d.png"))

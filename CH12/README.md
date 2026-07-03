@@ -111,3 +111,50 @@ The `geomorphometry_in_grass.sh` script is a simplified version of the Python sc
     ```bash
     ./geomorphometry_in_grass.sh
     ```
+
+### Running on Windows
+
+All four versions drive GRASS, which runs on Windows, so the analysis works
+there. The scripts are written for a Unix shell with `grass` on the `PATH`, so
+pick one of the two paths below and then follow the per-language steps above.
+
+#### Recommended: WSL2
+
+The simplest, most reliable option is the Windows Subsystem for Linux, which
+runs the scripts exactly as on Linux with no edits.
+
+1. Install WSL2 with Ubuntu (in PowerShell, once):
+
+    ```powershell
+    wsl --install
+    ```
+
+2. Open the Ubuntu shell, install GRASS 8.5+, Python, and (for the R version) R,
+   then clone this repository inside WSL.
+3. Follow the **Python**, **R**, or **Shell** steps above unchanged.
+
+#### Native Windows (OSGeo4W)
+
+1. Install GRASS with the [OSGeo4W installer](https://grass.osgeo.org/download/windows/).
+   It bundles PDAL, which `r.in.pdal` and `v.in.pdal` require.
+2. Launch the **OSGeo4W Shell** (from the Start menu), not `cmd` or PowerShell,
+   so that `grass` and the GRASS tools are on the `PATH`.
+3. From that shell, run the Python script or notebook, or the R script:
+
+    ```bat
+    python geomorphometry_in_grass.py
+    jupyter notebook geomorphometry_in_grass.ipynb
+    Rscript geomorphometry_in_grass.R
+    ```
+
+Notes for native Windows:
+
+* The `geomorphometry_in_grass.sh` version needs a Bash shell (WSL2 or Git Bash);
+  it does not run in `cmd` or PowerShell.
+* If the Python script reports `GRASS executable 'grass' not found on PATH`, you
+  are not in the OSGeo4W Shell. Open it and retry, or set the `GISBASE`
+  environment variable to your GRASS installation.
+* Add-ons install automatically when you run the Python script, or install them
+  manually with the `g.extension` commands listed under **Shell** above.
+* Download the data from the Zenodo links above and unzip the LiDAR archive so
+  that `data/LAS_ponui_island_lidar.laz` exists.
