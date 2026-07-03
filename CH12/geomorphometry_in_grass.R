@@ -73,13 +73,10 @@ require_file <- function(path) {
 }
 
 have_module <- function(mod) {
-  # Check whether a GRASS module is callable in the current session.
-  res <- tryCatch(
-    execGRASS(mod, flags = "help", ignore.stderr = TRUE, ignore.stdout = TRUE,
-              intern = TRUE, echoCmd = FALSE),
-    error = function(e) NULL
-  )
-  !is.null(res)
+  # A module is usable if its executable resolves on PATH, mirroring the
+  # shell workflow's `command -v`. This avoids doGRASS's required-parameter
+  # validation, which rejects `flags = "help"` for tools.
+  nzchar(Sys.which(mod))
 }
 
 warn_missing_addon <- function(mod) {
@@ -146,7 +143,7 @@ message(sprintf("Importing DSM/DTM (%dm) and LiDAR mean DTM...", ISLAND_RES))
 execGRASS("r.import",
   input = DSM_TIF, output = DSM_NAME,
   resample = "bilinear", resolution = "value",
-  resolution_value = as.character(ISLAND_RES),
+  resolution_value = ISLAND_RES,
   title = sprintf("Ponui Island %dm DSM", ISLAND_RES),
   flags = "quiet"
 )
@@ -154,7 +151,7 @@ execGRASS("r.import",
 execGRASS("r.import",
   input = DTM_TIF, output = DTM_NAME,
   resample = "bilinear", resolution = "value",
-  resolution_value = as.character(ISLAND_RES),
+  resolution_value = ISLAND_RES,
   title = sprintf("Ponui Island %dm DTM", ISLAND_RES),
   flags = "quiet"
 )
@@ -162,8 +159,8 @@ execGRASS("r.import",
 # LiDAR mean raster at island resolution
 execGRASS("r.in.pdal",
   input = LIDAR_LAZ, output = LIDAR_DTM_10M,
-  method = "mean", resolution = as.character(ISLAND_RES),
-  class_filter = "2",
+  method = "mean", resolution = ISLAND_RES,
+  class_filter = 2,
   flags = c("w", "e", "quiet")
 )
 
@@ -222,14 +219,14 @@ execGRASS("g.region", region = AOI_REGION, res = as.character(AOI_RES), flags = 
 message("Importing LiDAR ground points (vector)...")
 execGRASS("v.in.pdal",
   input = LIDAR_LAZ, output = "lidar_be",
-  class_filter = "2",
+  class_filter = 2,
   flags = c("o", "r", "quiet")
 )
 
 message("Counting LiDAR points per cell (1m)...")
 execGRASS("r.in.pdal",
   input = LIDAR_LAZ, output = "lidar_dtm_n_1m",
-  method = "n", resolution = "1", class_filter = "2",
+  method = "n", resolution = 1, class_filter = 2,
   flags = c("w", "e", "quiet")
 )
 
@@ -242,8 +239,8 @@ execGRASS("v.surf.rst",
   pcurvature = paste0(LIDAR_DTM_1M, "_rst_pcurv"),
   tcurvature = paste0(LIDAR_DTM_1M, "_rst_tcurv"),
   mcurvature = paste0(LIDAR_DTM_1M, "_rst_mcurv"),
-  tension = "300", smooth = "0.1", npmin = "200",
-  dmin = "1.5", nprocs = "4",
+  tension = 300, smooth = 0.1, npmin = 200,
+  dmin = 1.5, nprocs = 4,
   flags = c("t", "quiet")
 )
 
@@ -272,7 +269,7 @@ if (have_module("r.smooth.edgepreserve")) {
     input      = LIDAR_DTM_1M,
     output     = paste0(LIDAR_DTM_1M, "_s_agg_tukey"),
     `function` = "tukey",
-    threshold = "15", lambda = "0.4", steps = "20",
+    threshold = 15, lambda = 0.4, steps = 20,
     flags = "quiet"
   )
 
@@ -302,7 +299,7 @@ execGRASS("r.watershed",
   drainage     = "d8_mfd_flowdir",
   stream       = "d8_mfd_streams",
   basin        = "d8_mfd_basins2",
-  threshold    = "100000",
+  threshold    = 100000,
   flags = c("a", "4", "quiet")
 )
 
@@ -311,7 +308,7 @@ execGRASS("r.watershed",
   elevation    = LIDAR_DTM_1M,
   accumulation = "d8_sfd_flowaccum",
   drainage     = "d8_sfd_flowdir",
-  threshold    = "100000",
+  threshold    = 100000,
   flags = c("s", "a", "quiet")
 )
 
@@ -357,7 +354,7 @@ if (have_module("r.stream.order") && have_module("r.stream.extract")) {
 
   execGRASS("r.stream.extract",
     elevation     = LIDAR_DTM_1M,
-    threshold     = "5000",
+    threshold     = 5000,
     direction     = "stream_extract_dir",
     stream_raster = "stream_extract",
     stream_vector = "stream_extract",
@@ -383,12 +380,12 @@ message("Running HAND workflow...")
 if (have_module("r.hand")) {
   execGRASS("r.hand",
     elevation          = LIDAR_DTM_1M,
-    threshold          = "50000",
+    threshold          = 50000,
     inundation_raster  = "inundation",
     inundation_strds   = "inundation_strds",
-    start_water_level  = "0",
-    end_water_level    = "5",
-    water_level_step   = "0.5",
+    start_water_level  = 0,
+    end_water_level    = 5,
+    water_level_step   = 0.5,
     hand               = "hand",
     flags = c("t", "quiet")
   )
@@ -413,10 +410,10 @@ tryCatch({
     elevation = LIDAR_DTM_1M,
     dx = paste0(LIDAR_DTM_1M, "_dx"),
     dy = paste0(LIDAR_DTM_1M, "_dy"),
-    rain_value = "30", infil_value = "0.0", man_value = "0.2",
-    niterations = "30", output_step = "2",
+    rain_value = 30, infil_value = 0.0, man_value = 0.2,
+    niterations = 30, output_step = 2,
     depth = "depth", discharge = "disch",
-    random_seed = "3", nwalkers = "100000", nprocs = "4",
+    random_seed = 3, nwalkers = 100000, nprocs = 4,
     flags = "t"
   )
 
@@ -436,14 +433,14 @@ tryCatch({
     dy = paste0(LIDAR_DTM_1M, "_dy"),
     water_depth = "depth.30",
     detachment_coeff = "detin", transport_coeff = "tranin",
-    shear_stress = "shear_stress", man_value = "0.04",
+    shear_stress = "shear_stress", man_value = 0.04,
     transport_capacity = "transport_capacity",
     tlimit_erosion_deposition = "tlimit_erosion_deposition",
     sediment_concentration = "sediment_concentration",
     sediment_flux = "sediment_flux",
     erosion_deposition = "erosion_deposition",
-    niterations = "30", output_step = "2",
-    random_seed = "3", nprocs = "4", nwalkers = "100000"
+    niterations = 30, output_step = 2,
+    random_seed = 3, nprocs = 4, nwalkers = 100000
   )
 }, finally = {
   # Never leave the mask active in PERMANENT, even on error.
@@ -460,7 +457,7 @@ execGRASS("r.sun",
   aspect = paste0(LIDAR_DTM_1M, "_aspect"),
   glob_rad   = "global_rad_356",
   insol_time = "insol_time_356",
-  day = "356",
+  day = 356,
   flags = "quiet"
 )
 
@@ -470,7 +467,7 @@ execGRASS("r.sun",
   aspect = paste0(LIDAR_DTM_1M, "_aspect"),
   glob_rad   = "global_rad_172",
   insol_time = "insol_time_172",
-  day = "172",
+  day = 172,
   flags = "quiet"
 )
 
@@ -486,7 +483,7 @@ if (have_module("r.geomorphon")) {
   execGRASS("r.geomorphon",
     elevation = LIDAR_DTM_1M,
     forms     = paste0(LIDAR_DTM_1M, "_landforms"),
-    search = "21", skip = "1", flat = "1", dist = "0",
+    search = 21, skip = 1, flat = 1, dist = 0,
     flags = "quiet"
   )
 } else {
@@ -497,7 +494,7 @@ if (have_module("r.param.scale")) {
   execGRASS("r.param.scale",
     input  = LIDAR_DTM_1M,
     output = paste0(LIDAR_DTM_1M, "_morphology"),
-    method = "feature", size = "5",
+    method = "feature", size = 5,
     flags = "quiet"
   )
 } else {
