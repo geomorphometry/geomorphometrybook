@@ -1201,8 +1201,6 @@ def aoi_3d_figure(
         shading=["gouraud"] * 2,
         style=["surface"] * 2,
         wire_color=["136:136:136", "0:0:0"],
-        volume="inundation_3d",
-        volume_position="0,0,1500",
         height=1200,
         position="0.40,0.05",
         perspective=30,
