@@ -39,10 +39,17 @@ MAPSET_NAME   <- "PERMANENT"
 EPSG_CODE     <- "2193"
 GISDBASE      <- PROJECT_DIR
 
+# Input data (remote files by default)
+DSM_TIF   <- file.path(PROJECT_DIR, "data", "/vsicurl/https://zenodo.org/records/18314107/files/DEM_ponui_island_dsm.tif?download=1")
+DTM_TIF   <- file.path(PROJECT_DIR, "data", "/vsicurl/https://zenodo.org/records/18314107/files/DEM_ponui_island_dtm.tif?download=1")
+
 # Input data (local files by default)
-DSM_TIF   <- file.path(PROJECT_DIR, "data", "dsm.cog.tif")
-DTM_TIF   <- file.path(PROJECT_DIR, "data", "dtm.cog.tif")
-LIDAR_LAZ <- file.path(PROJECT_DIR, "data", "lidar.laz")
+# DSM_TIF   <- file.path(PROJECT_DIR, "data", "DEM_ponui_island_dtm.tif")
+# DTM_TIF   <- file.path(PROJECT_DIR, "data", "DEM_ponui_island_dtm.tif")
+LIDAR_LAZ <- file.path(PROJECT_DIR, "data", "LAS_ponui_island_lidar.laz")
+if (!file.exists(LIDAR_LAZ)) {
+  stop("FileNotFoundError: The file '", LIDAR_LAZ, "' does not exist.", call. = FALSE)
+}
 
 # Raster names used throughout the workflow
 DSM_NAME             <- "dsm_10m"

@@ -40,22 +40,22 @@ PROJECT_DIR = Path(__file__).resolve().parent
 PROJECT_NAME = Path(PROJECT_DIR, "ponui")
 MAPSET_NAME = "PERMANENT"
 
-# DSM_PATH = (
-#     "https://zenodo.org/records/18314107/files/DEM_ponui_island_dsm.tif"
-#     "?download=1"
-# )
+DSM_PATH = (
+    "/vsicurl/https://zenodo.org/records/18314107/files/DEM_ponui_island_dsm.tif"
+    "?download=1"
+)
 # Uncomment and adjust the path if you are using a local DSM file
 # instead of downloading from Zenodo
-DSM_PATH = Path(PROJECT_DIR, "data/dsm.cog.tif")
+DSM_PATH = Path(PROJECT_DIR, "data/DEM_ponui_island_dsm.tif")
 DSM_NAME = "dsm_10m"
 
-# DTM_PATH = (
-#     "https://zenodo.org/records/18314107/files/DEM_ponui_island_dtm.tif"
-#     "?download=1"
-# )
+DTM_PATH = (
+    "/vsicurl/https://zenodo.org/records/18314107/files/DEM_ponui_island_dtm.tif"
+    "?download=1"
+)
 # Uncomment and adjust the path if you are using a local DTM file
 # instead of downloading from Zenodo
-DTM_PATH = Path(PROJECT_DIR, "data/dtm.cog.tif")
+# DTM_PATH = Path(PROJECT_DIR, "data/DEM_ponui_island_dtm.tif")
 DTM_NAME = "dem_10m"
 DTM_RELIEF = "dtm_relief"
 
@@ -64,7 +64,11 @@ ISLAND_RESOLUTION = 10  # meters
 # LIDAR_PATH = (
 #     "https://zenodo.org/records/18314107/files/LAS_ponui_island_lidar.zip?download=1"
 # )
-LIDAR_PATH = Path(PROJECT_DIR, "data/lidar.laz")
+LIDAR_PATH = Path(PROJECT_DIR, "data/LAS_ponui_island_lidar.las")
+if not LIDAR_PATH.exists():
+    raise FileNotFoundError(f"The file {LIDAR_PATH} does not exist.")
+
+
 LIDAR_DTM_10M = "lidar_dtm_10m"
 LIDAR_DTM_1M = "lidar_dtm_1m"
 LIDAR_DTM_1M_RELIEF = "lidar_dtm_1m_relief"

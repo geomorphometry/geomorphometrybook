@@ -20,10 +20,18 @@ EPSG_CODE="2193"
 GISDBASE="$PROJECT_DIR"
 LOCATION_PATH="$GISDBASE/$LOCATION_NAME"
 
-# --- Input data (local files by default) ---
-DSM_TIF="$PROJECT_DIR/data/dsm.cog.tif"
-DTM_TIF="$PROJECT_DIR/data/dtm.cog.tif"
-LIDAR_LAZ="$PROJECT_DIR/data/lidar.laz"
+# --- Input data (Remote files by default) ---
+DSM_TIF="/vsicurl/https://zenodo.org/records/18314107/files/DEM_ponui_island_dsm.tif?download=1"
+DTM_TIF="/vsicurl/https://zenodo.org/records/18314107/files/DEM_ponui_island_dtm.tif?download=1"
+
+# --- Input data (local files) ---
+# DSM_TIF="$PROJECT_DIR/data/dsm.cog.tif"
+# DTM_TIF="$PROJECT_DIR/data/dtm.cog.tif"
+LIDAR_LAZ="$PROJECT_DIR/data/LAS_ponui_island_lidar.laz"
+if [ ! -e "$LIDAR_LAZ" ]; then
+  echo "Error: File '$LIDAR_LAZ' does not exist." >&2
+  exit 1
+fi
 
 # --- Raster names used in the chapter workflow ---
 DSM_NAME="dsm_10m"
