@@ -1,0 +1,5 @@
+data/
+figures/
+ponui/
+__pycache__/
+*.pyc
