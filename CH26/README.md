@@ -1,4 +1,4 @@
-# geomorphometrybook
+# Geomorphometry
 
 ## Chapter 26: Geomorphometry in Spatial Hydrological Modeling
 
