@@ -50,7 +50,7 @@
 #### Table 2. Regional (country/continent level) elevation datasets, main references and links to data
 
 | Dataset                        | Spatial Resolution    | Link                                                                                                                                   |
-|--------------------------------|-----------------------|-------------|--------------------------------------------------------------------------------------------------------------------------| 
+|--------------------------------|-----------------------|----------------------------------------------------------------------------------------------------------------------------------------| 
 |Africa                          | 30 m                  | [link](https://www.africageoportal.com/search?tags=dem)                                                                                |
 |Antarctica (REMA)               | 2 m                   | [link](https://www.pgc.umn.edu/data/rema/)                                                                                             |
 |ArticDEM                        | 2 m                   | [link](https://www.pgc.umn.edu/data/arcticdem/)                                                                                        |
