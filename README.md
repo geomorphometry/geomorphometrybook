@@ -1,7 +1,9 @@
 # Geomorphometry - Concepts, Software, Application 
 Editors: Reuter, Grohmann, Lecours
 
-Paperback ISBN: 9780443333767 eBook ISBN: 9780443333774 DOI:https:/doi.org/10.1016/C2023-0-52503-0 
+Paperback ISBN: 9780443333767 
+eBook ISBN: 9780443333774 
+DOI: https:/doi.org/10.1016/C2023-0-52503-0 
 
 To Mother Nature, for shaping the Earth so that we can measure it and see beauty in our geovisualizations.
 
