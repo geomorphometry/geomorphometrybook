@@ -78,7 +78,7 @@ SET dem_nz="%CD%\SRTM (CGIAR CSI) New Zealand (1000m).tif"
 IF NOT EXIST %dem_nz% (
     ECHO downloading SRTM-CGIAR DEM for New Zealand
     REM Tool: SRTM (CGIAR CSI)
-    %SAGA_CMD% io_webservices -RESULT=%dem_nz% ^
+    %SAGA_CMD% io_webservices 1 -RESULT=%dem_nz% ^
         -XMIN=18529000 -XMAX=19879000 -YMIN=-5264000 -YMAX=-3827000 -CELLSIZE=1000 ^
         -CRS_STRING="+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs"
     REM targeted CRS is 'Equidistant Cylindrical' (aka 'Plate Carree')
@@ -101,7 +101,7 @@ REM _____________________________________
 REM #####################################
 REM Process_Fig3(dem):
 REM [Basin]
-REM Fig. 8.3: Topographic direct solar radiation on June 21 (austral winter solstice) at 02, 03, and 04 pm
+REM Fig.3: Topographic direct solar radiation on June 21 (austral winter solstice) at 02, 03, and 04 pm
 REM upper row: cast-shadowing included—lower row: cast-shadowing ignored
 
 ECHO Processing: Topographic direct solar radiation
@@ -119,7 +119,7 @@ REM Tool: Potential Incoming Solar Radiation
 REM _____________________________________
 REM #####################################
 REM [Basin]
-REM Fig. 8.4: Topographic shortwave radiation on June 21 (austral winter solstice) at 04 pm
+REM Fig.4: Topographic shortwave radiation on June 21 (austral winter solstice) at 04 pm
 REM (a) Topographic direct solar radiation, (b) Topographic diffuse solar radiation, (c) Topographic land surface radiation
 
 ECHO Processing: Topographic shortwave radiation on June 21 (austral winter solstice) at 4 pm
@@ -200,7 +200,7 @@ REM Air Humidity Conversions
 REM _____________________________________
 REM #####################################
 REM [Basin]
-REM Fig. 9: Land Surface Parameters effecting temperature and moisture distribution
+REM Fig.9: Land Surface Parameters effecting temperature and moisture distribution
 REM (a) diurnal anisotropic heating (αmax = 202.5°), (b) relative slope position, and (c) delineated relative vertical distance to mid-slope position.
 
 ECHO Processing: Land Surface Parameters effecting temperature and moisture distribution
