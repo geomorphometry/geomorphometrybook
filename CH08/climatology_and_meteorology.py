@@ -120,7 +120,7 @@ def Get_DEM_New_Zealand(File):
 #________________________________________
 def Process_Fig3(dem):
     # [Basin]
-    # Fig. 8.3: Topographic direct solar radiation on June 21 (austral winter solstice) at 02, 03, and 04 pm
+    # Fig.3: Topographic direct solar radiation on June 21 (austral winter solstice) at 02, 03, and 04 pm
     # upper row: cast-shadowing included—lower row: cast-shadowing ignored
 
     from PySAGA.tools import ta_lighting
@@ -139,7 +139,7 @@ def Process_Fig3(dem):
 #________________________________________
 def Process_Fig4(dem, atmospheric_transmittance=60):
     # [Basin]
-    # Fig. 8.4: Topographic shortwave radiation on June 21 (austral winter solstice) at 04 pm
+    # Fig.4: Topographic shortwave radiation on June 21 (austral winter solstice) at 04 pm
     # (a) Topographic direct solar radiation, (b) Topographic diffuse solar radiation, (c) Topographic land surface radiation
 
     from PySAGA.tools import ta_lighting
@@ -163,11 +163,11 @@ def Process_Fig5(dem, dates=['2026-12-21', '2026-06-21'], atmospheric_transmitta
 
     from PySAGA.tools import ta_lighting
 
-    total   = saga_api.SG_Get_Data_Manager().Add_Grid()
-    svf     = saga_api.SG_Get_Data_Manager().Add_Grid()
+    svf = saga_api.SG_Get_Data_Manager().Add_Grid()
     ta_lighting.Sky_View_Factor(DEM=dem, SVF=svf, RADIUS=1000)
 
     for date in dates:
+        total = saga_api.SG_Get_Data_Manager().Add_Grid()
         ta_lighting.Potential_Incoming_Solar_Radiation(GRD_DEM=dem, GRD_SVF=svf, GRD_TOTAL=total,
             PERIOD='day', DAY=date, LUMPED=atmospheric_transmittance)
         total.Set_Scaling(1000. / 24.) # [kWh/m2] >> [W/m2]
@@ -217,7 +217,7 @@ def Process_Fig7and8(dem):
 #________________________________________
 def Process_Fig9(dem):
     # [Basin]
-    # Fig. 9: Land Surface Parameters effecting temperature and moisture distribution
+    # Fig.9: Land Surface Parameters effecting temperature and moisture distribution
     # (a) diurnal anisotropic heating (αmax = 202.5°), (b) relative slope position, and (c) delineated relative vertical distance to mid-slope position.
 
     from PySAGA.tools import ta_morphometry
@@ -252,7 +252,7 @@ def Process_Fig10(dem):
 #________________________________________
 def Process_Fig11(dem):
     # [New Zealand]
-    # Fig.7: Topographic exposure vs. precipitation distribution in New Zealand
+    # Fig.11: Topographic exposure vs. precipitation distribution in New Zealand
     # Windward-Leeward Index (WLI) for advection direction west (a) and spatial distribution of mean monthly precipitation in January (b) and July (c),
     # 1981-2010 long-term means (Karger et al., 2017).
 
