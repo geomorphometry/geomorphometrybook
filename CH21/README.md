@@ -1,4 +1,4 @@
-# geomorphometrybook
+# Geomorphometry
 
 ## Chapter 21 -- Soil Mapping Applications 
 

@@ -102,6 +102,7 @@ Some popular options for each language are provided below:
 
 **Julia**
 - [VS Code + Julia Extension](https://code.visualstudio.com/docs/languages/julia)
+- [Julia for Positron](https://open-vsx.org/extension/ntluong95/positron-julia)
 
 ### Packages
 
